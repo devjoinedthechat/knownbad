@@ -1,0 +1,30 @@
+{"id": "boil", "input": "At what temperature does water boil at sea level, in Celsius?", "reference": "Water boils at 100 degrees Celsius at sea level."}
+{"id": "freeze-f", "input": "At what temperature does water freeze, in Fahrenheit?", "reference": "Water freezes at 32 degrees Fahrenheit."}
+{"id": "light", "input": "Roughly how fast does light travel in a vacuum?", "reference": "Light travels at about 299,792 kilometres per second in a vacuum."}
+{"id": "planets", "input": "How many planets are in the Solar System?", "reference": "The Solar System has 8 planets."}
+{"id": "moon-days", "input": "How long does the Moon take to orbit the Earth?", "reference": "The Moon takes about 27.3 days to orbit the Earth."}
+{"id": "bones", "input": "How many bones does an adult human have?", "reference": "An adult human has 206 bones."}
+{"id": "chromosomes", "input": "How many chromosomes do human cells normally have?", "reference": "Human cells normally have 46 chromosomes, in 23 pairs."}
+{"id": "carbon", "input": "What is the atomic number of carbon?", "reference": "Carbon has atomic number 6."}
+{"id": "gold", "input": "What is the chemical symbol for gold?", "reference": "The chemical symbol for gold is Au."}
+{"id": "ph", "input": "What is the pH of pure water?", "reference": "Pure water has a pH of 7."}
+{"id": "byte", "input": "How many bits are in a byte?", "reference": "A byte has 8 bits."}
+{"id": "http-ok", "input": "Which HTTP status code means the request succeeded?", "reference": "HTTP status code 200 means the request succeeded."}
+{"id": "http-missing", "input": "Which HTTP status code means the page was not found?", "reference": "HTTP status code 404 means the page was not found."}
+{"id": "https-port", "input": "Which port does HTTPS use by default?", "reference": "HTTPS uses port 443 by default."}
+{"id": "ipv4", "input": "How many bits long is an IPv4 address?", "reference": "An IPv4 address is 32 bits long."}
+{"id": "marathon", "input": "How long is a marathon in kilometres?", "reference": "A marathon is 42.195 kilometres long."}
+{"id": "leap", "input": "How many days does a leap year have?", "reference": "A leap year has 366 days."}
+{"id": "minute-day", "input": "How many minutes are in a day?", "reference": "A day has 1,440 minutes."}
+{"id": "triangle", "input": "What do the interior angles of a triangle add up to?", "reference": "The interior angles of a triangle add up to 180 degrees."}
+{"id": "pi", "input": "What is pi to two decimal places?", "reference": "Pi is 3.14 to two decimal places."}
+{"id": "prime", "input": "What is the smallest prime number?", "reference": "The smallest prime number is 2."}
+{"id": "hex", "input": "What is the decimal value of the hexadecimal number FF?", "reference": "Hexadecimal FF is 255 in decimal."}
+{"id": "octave", "input": "How many semitones are in an octave?", "reference": "An octave has 12 semitones."}
+{"id": "chess", "input": "How many squares are on a chessboard?", "reference": "A chessboard has 64 squares."}
+{"id": "everest", "input": "About how high is Mount Everest?", "reference": "Mount Everest is about 8,849 metres high."}
+{"id": "continents", "input": "How many continents are there by the most common count?", "reference": "By the most common count there are 7 continents."}
+{"id": "oxygen", "input": "About what share of the air is oxygen?", "reference": "Oxygen makes up about 21 percent of the air."}
+{"id": "heart", "input": "How many chambers does the human heart have?", "reference": "The human heart has 4 chambers."}
+{"id": "kilo", "input": "How many grams are in a kilogram?", "reference": "A kilogram has 1,000 grams."}
+{"id": "dozen", "input": "How many items are in a gross?", "reference": "A gross is 144 items, which is 12 dozen."}

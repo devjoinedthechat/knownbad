@@ -41,3 +41,5 @@ select = ["E", "F", "I", "B", "UP"]
 [tool.ruff.lint.per-file-ignores]
 # The report embeds its stylesheet and script as strings.
 "src/knownbad/report/html.py" = ["E501"]
+# Quoted judge prompts keep their original line lengths.
+"study/judges/*.py" = ["E501"]

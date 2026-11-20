@@ -93,22 +93,21 @@ def cmd_run(args: argparse.Namespace) -> int:
     return _finish(args, outcomes, items, args.grader or args.cmd)
 
 
-def _finish(
-    args: argparse.Namespace,
+def make_result(
     outcomes: list[Outcome],
     items: dict[str, Any],
     grader: str,
+    trials: int = 1,
     usage: dict[str, Any] | None = None,
-) -> int:
-    """Summarise, write the files that were asked for, print, and gate."""
-    summary = summarise(outcomes)
-    result = {
+) -> dict[str, Any]:
+    """The result file: everything a report needs, and nothing it has to recompute."""
+    result: dict[str, Any] = {
         "schema": SCHEMA,
         "knownbad": __version__,
         "created": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "grader": grader,
-        "trials": args.trials,
-        "summary": summary,
+        "trials": trials,
+        "summary": summarise(outcomes),
         "items": {
             item.id: {"input": item.input, "reference": item.reference, "rubric": item.rubric}
             for item in items.values()
@@ -117,6 +116,19 @@ def _finish(
     }
     if usage:
         result["usage"] = usage
+    return result
+
+
+def _finish(
+    args: argparse.Namespace,
+    outcomes: list[Outcome],
+    items: dict[str, Any],
+    grader: str,
+    usage: dict[str, Any] | None = None,
+) -> int:
+    """Summarise, write the files that were asked for, print, and gate."""
+    result = make_result(outcomes, items, grader, args.trials, usage)
+    summary = result["summary"]
     if args.out:
         write_json(args.out, result)
     if args.html:

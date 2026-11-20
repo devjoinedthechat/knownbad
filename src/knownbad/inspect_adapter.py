@@ -142,7 +142,11 @@ def run_task(
         for sample in log.samples or []:
             verdicts[str(sample.id)].append(_verdict(sample, scorer_name, to_float, pass_score))
         usage = {
-            name: {"input_tokens": use.input_tokens, "output_tokens": use.output_tokens}
+            name: {
+                "input_tokens": use.input_tokens,
+                "output_tokens": use.output_tokens,
+                "reasoning_tokens": getattr(use, "reasoning_tokens", None) or 0,
+            }
             for name, use in (log.stats.model_usage if log.stats else {}).items()
         }
 
