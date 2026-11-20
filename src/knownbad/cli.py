@@ -10,6 +10,7 @@ from typing import Any
 
 from . import __version__
 from .analyze import gate, summarise
+from .compare import compare, regressions
 from .controls import FAMILIES, build
 from .grader import command_grader, load_callable, python_grader
 from .io import (
@@ -21,7 +22,7 @@ from .io import (
     write_json,
     write_text,
 )
-from .report import render_text
+from .report import render_diff, render_text
 from .runner import Outcome, run
 
 SCHEMA = 1
@@ -203,6 +204,22 @@ def cmd_report(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+def cmd_diff(args: argparse.Namespace) -> int:
+    old, new = read_json(args.old), read_json(args.new)
+    for path, result in ((args.old, old), (args.new, new)):
+        if not isinstance(result, dict) or result.get("schema") != SCHEMA:
+            raise UsageError(f"{path} is not a knownbad result file of schema {SCHEMA}")
+    diff = compare(old, new)
+    if args.json:
+        write_json(args.json, diff)
+    if not args.quiet:
+        print(render_diff(diff, limit=args.limit), end="")
+    reasons = regressions(diff) if args.fail_on_regression else []
+    for reason in reasons:
+        print(f"FAIL  {reason}", file=sys.stderr)
+    return EXIT_GATE if reasons else EXIT_OK
+
+
 def _add_run_options(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--controls", metavar="FILE", help="a frozen controls file from 'gen'")
     parser.add_argument("--trials", type=int, default=1, help="grade each control this many times")
@@ -282,6 +299,19 @@ def parser() -> argparse.ArgumentParser:
     _add_build_options(insp)
     _add_run_options(insp)
     insp.set_defaults(run=cmd_inspect)
+
+    diff = commands.add_parser("diff", help="compare two runs made from the same controls")
+    diff.add_argument("old", help="the baseline result file")
+    diff.add_argument("new", help="the result file to judge against it")
+    diff.add_argument(
+        "--fail-on-regression",
+        action="store_true",
+        help="exit 1 when a caught control now passes or a passing reference now fails",
+    )
+    diff.add_argument("--json", metavar="FILE", help="write the comparison as JSON")
+    diff.add_argument("--limit", type=int, default=10, help="controls to list per kind of change")
+    diff.add_argument("-q", "--quiet", action="store_true")
+    diff.set_defaults(run=cmd_diff)
 
     report = commands.add_parser("report", help="show a saved result again")
     report.add_argument("result")

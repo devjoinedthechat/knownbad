@@ -114,3 +114,57 @@ def render(result: dict[str, Any], limit: int = 8) -> str:
     elif not summary["void"]:
         out("No must-fail control passed.")
     return "\n".join(lines).rstrip() + "\n"
+
+
+MOVE_TITLES = {
+    "broken": "Wrong answers that were caught and now pass",
+    "newly_rejected": "Reference answers that passed and now fail",
+    "fixed": "Wrong answers that passed and are now caught",
+    "newly_accepted": "Reference answers that failed and now pass",
+    "now_passes": "Edited answers that failed and now pass",
+    "now_fails": "Edited answers that passed and now fail",
+}
+
+
+def render_diff(diff: dict[str, Any], limit: int = 10) -> str:
+    lines: list[str] = []
+    out = lines.append
+    out(f"old  {diff['old']['grader']}  {diff['old']['created'] or ''}".rstrip())
+    out(f"new  {diff['new']['grader']}  {diff['new']['created'] or ''}".rstrip())
+    out(f"{diff['shared']} controls in both runs")
+    if diff["only_old"] or diff["only_new"]:
+        out(f"not compared: {diff['only_old']} only in old, {diff['only_new']} only in new")
+    if diff["unreadable"]:
+        out(f"not compared: {len(diff['unreadable'])} with no verdict in one of the runs")
+    out("")
+    leaks, refs = diff["leaks"], diff["references"]
+    if leaks["old"]["n"]:
+        out(
+            f"Wrong answers that passed   {pct(leaks['old']['rate'])} → {pct(leaks['new']['rate'])}"
+            f"   ({leaks['old']['k']} → {leaks['new']['k']} of {leaks['old']['n']})"
+        )
+    if refs["old"]["n"]:
+        out(
+            f"Reference answers passed    {pct(refs['old']['rate'])} → {pct(refs['new']['rate'])}"
+            f"   ({refs['old']['k']} → {refs['new']['k']} of {refs['old']['n']})"
+        )
+    fixed, broken = len(diff["moves"]["fixed"]), len(diff["moves"]["broken"])
+    if diff["p_value"] is None:
+        out("No must-fail control changed its verdict.")
+    else:
+        sure = "unlikely to be chance" if diff["p_value"] < 0.05 else "could be chance"
+        out(
+            f"{fixed} fixed, {broken} broken: the grader is {diff['direction']} on these "
+            f"controls (p = {diff['p_value']:.3f}, {sure})"
+        )
+    for name, title in MOVE_TITLES.items():
+        ids = diff["moves"][name]
+        if not ids:
+            continue
+        out("")
+        out(f"{title} ({len(ids)})")
+        for control_id in ids[:limit]:
+            out(f"  {control_id}")
+        if len(ids) > limit:
+            out(f"  … and {len(ids) - limit} more")
+    return "\n".join(lines).rstrip() + "\n"

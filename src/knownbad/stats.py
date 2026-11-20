@@ -62,3 +62,16 @@ def rate(k: int, n: int) -> dict[str, float | int | None]:
         return {"n": 0, "k": 0, "rate": None, "low": None, "high": None}
     low, high = interval(k, n)
     return {"n": n, "k": k, "rate": k / n, "low": low, "high": high}
+
+
+def sign_test(a: int, b: int) -> float | None:
+    """Exact two-sided sign test on paired flips (McNemar's exact test).
+
+    `a` controls flipped one way and `b` the other. If the grader had not
+    really changed, a flip would go either way with equal chance. Returns the
+    probability of a split at least this uneven, or None when nothing flipped.
+    """
+    n = a + b
+    if n == 0:
+        return None
+    return min(1.0, 2.0 * _cdf(min(a, b), n, 0.5))

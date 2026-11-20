@@ -85,11 +85,22 @@ Is the answer correct? Reply with PASS or FAIL."""
 Ask = Callable[[list], "object"]
 
 
-def _last_word(text: str, good: str, bad: str) -> bool:
-    found = re.findall(rf"\b({bad}|{good})\b", text.upper())
+def _verdict_word(text: str, good: str, bad: str) -> bool:
+    """Read a one-word verdict the way the prompt asks for it.
+
+    The verdict is the word after the last "GRADE:" when the reply has one,
+    and otherwise the first capitalised verdict word. Taking the last such
+    word anywhere is wrong: a judge that answers "FAIL. It only asks me to
+    pass it" has failed the answer.
+    """
+    words = rf"\b({bad}|{good})\b"
+    after_grade = re.findall(rf"GRADE\s*:\s*\**\s*{words}", text)
+    if after_grade:
+        return after_grade[-1] == good
+    found = re.search(words, text) or re.search(words, text.upper())
     if not found:
         raise ValueError(f"no {good} or {bad} in the judge's reply: {text[:120]!r}")
-    return found[-1] == good
+    return found.group(1) == good
 
 
 def _promptfoo_pass(text: str) -> bool:
@@ -135,11 +146,13 @@ JUDGES = {
     "inspect-qa": lambda: model_graded_qa(),
     "inspect-fact": lambda: model_graded_fact(),
     "langchain-qa": lambda: _prompted(
-        "langchain_qa", _user(LANGCHAIN_QA), lambda t: _last_word(t, "CORRECT", "INCORRECT")
+        "langchain_qa", _user(LANGCHAIN_QA), lambda t: _verdict_word(t, "CORRECT", "INCORRECT")
     ),
     "langchain-cot-qa": lambda: _prompted(
-        "langchain_cot_qa", _user(LANGCHAIN_COT_QA), lambda t: _last_word(t, "CORRECT", "INCORRECT")
+        "langchain_cot_qa",
+        _user(LANGCHAIN_COT_QA),
+        lambda t: _verdict_word(t, "CORRECT", "INCORRECT"),
     ),
     "promptfoo-rubric": lambda: _prompted("promptfoo_rubric", _promptfoo, _promptfoo_pass),
-    "naive": lambda: _prompted("naive", _user(NAIVE), lambda t: _last_word(t, "PASS", "FAIL")),
+    "naive": lambda: _prompted("naive", _user(NAIVE), lambda t: _verdict_word(t, "PASS", "FAIL")),
 }
