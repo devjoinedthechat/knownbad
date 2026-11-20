@@ -38,15 +38,38 @@ SETS = {
     "runbooks": HERE / "sets" / "runbooks.jsonl",
 }
 # Dollars per million tokens: (input, output). Checked 2026-11-20.
-PRICES = {"claude-haiku-5-5": (0.10, 0.50), "claude-sonnet-5-5": (2.00, 10.00)}
-# (model, judges, every nth item). The larger model costs about twenty times
-# more per token, so it grades three judges on every third item.
-PLAN = (
-    ("claude-haiku-5-5", tuple(JUDGES), 1),
-    ("claude-sonnet-5-5", ("inspect-qa", "inspect-fact", "naive"), 3),
-)
-# Before the model is known, assume this much per control. Deliberately high.
-FIRST_GUESS = {"claude-haiku-5-5": 0.0006, "claude-sonnet-5-5": 0.012}
+PRICES = {
+    "claude-haiku-5-5": (0.10, 0.50),
+    "claude-sonnet-5-5": (2.00, 10.00),
+    "lfm-3-1.7b": (0.08, 0.20),
+    "llama-3.2-3b-instruct": (0.05, 0.33),
+    "gemma-3-4b-it": (0.05, 0.10),
+    "llama-3.1-8b-instruct": (0.02, 0.04),
+    "ministral-8b-2512": (0.15, 0.15),
+}
+# Each plan: (Inspect model id, judges, every nth item).
+PLANS = {
+    # The larger model costs about twenty times more per token, so it grades
+    # three judges on every third item.
+    "claude": (
+        ("anthropic/claude-haiku-5-5", tuple(JUDGES), 1),
+        ("anthropic/claude-sonnet-5-5", ("inspect-qa", "inspect-fact", "naive"), 3),
+    ),
+    # Small open models, hosted. Three judges on every second item: the
+    # question is whether a small judge passes plainly wrong answers at all.
+    "small": tuple(
+        (f"openrouter/{name}", ("inspect-qa", "langchain-qa", "strict"), 2)
+        for name in (
+            "liquid/lfm-3-1.7b",
+            "meta-llama/llama-3.2-3b-instruct",
+            "google/gemma-3-4b-it",
+            "meta-llama/llama-3.1-8b-instruct",
+            "mistralai/ministral-8b-2512",
+        )
+    ),
+}
+# Before a model's cost is measured, assume this much per control. Deliberately high.
+FIRST_GUESS = 0.012
 
 
 def cost_of(usage: dict[str, dict[str, int]]) -> float:
@@ -79,9 +102,11 @@ def main() -> int:
     )
     parser.add_argument("--workers", type=int, default=8)
     parser.add_argument("--only", help="run only cells whose name contains this text")
+    parser.add_argument("--plan", choices=sorted(PLANS), default="claude")
     args = parser.parse_args()
 
-    out_dir = HERE / ("results-dry" if args.dry_run else "results")
+    folder = "results" if args.plan == "claude" else f"results-{args.plan}"
+    out_dir = HERE / ("results-dry" if args.dry_run else folder)
     out_dir.mkdir(exist_ok=True)
     spent = 0.0
     per_control: dict[str, list[float]] = {}
@@ -96,7 +121,8 @@ def main() -> int:
         if done["summary"]["controls"]:
             per_control.setdefault(model, []).append(cell_cost / done["summary"]["controls"])
 
-    for model, judges, nth in PLAN:
+    for model_id, judges, nth in PLANS[args.plan]:
+        model = model_id.rsplit("/", 1)[-1]
         for judge in judges:
             for set_name in SETS:
                 name = f"{set_name}__{judge}__{model}"
@@ -110,7 +136,7 @@ def main() -> int:
                 items, samples = items_from(task)
                 controls = build(items)
                 seen = per_control.get(model)
-                rate = max(seen) if seen else FIRST_GUESS[model]
+                rate = max(seen) if seen else FIRST_GUESS
                 projected = 0.0 if args.dry_run else rate * len(controls)
                 if spent + projected > args.cap:
                     skipped.append(f"{name} (about ${projected:.2f}, ${args.cap - spent:.2f} left)")
@@ -119,7 +145,7 @@ def main() -> int:
                     task,
                     controls,
                     samples,
-                    model="mockllm/model" if args.dry_run else f"anthropic/{model}",
+                    model="mockllm/model" if args.dry_run else model_id,
                     max_connections=args.workers,
                 )
                 result = make_result(

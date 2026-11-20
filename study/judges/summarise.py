@@ -35,7 +35,8 @@ def pct(k: int, n: int) -> str:
 
 
 def main() -> int:
-    folder = HERE / ("results-dry" if "--dry-run" in sys.argv else "results")
+    named = [arg for arg in sys.argv[1:] if not arg.startswith("--")]
+    folder = HERE / (named[0] if named else "results-dry" if "--dry-run" in sys.argv else "results")
     cells = defaultdict(lambda: defaultdict(lambda: [0, 0]))
     cost_tokens = defaultdict(lambda: [0, 0])
     for path in sorted(folder.glob("*.json")):

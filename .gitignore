@@ -22,3 +22,6 @@ uv.lock
 /study/judges/results-v2-partial/
 /study/judges/results/
 .hypothesis/
+.env
+.env.*
+/study/judges/results-small/
