@@ -107,6 +107,22 @@ about the judges.
 Both have regression tests. Both are the kind of fault this tool exists to
 find in a grader, found in the tool by running it.
 
+After this run an independent code review found twelve more defects, most of
+them ways a control's claim could be false for unusual references: a hedged
+number such as "about 300 million", a donor that states the same fact in
+words, two word flips that cancel. All are fixed. What that means for the
+numbers above:
+
+- **Plainly wrong answers**: unaffected. The defects could only have produced
+  false leaks, and there were none.
+- **Sentence removed, number changed, word reversed, contradiction added**:
+  unaffected. These rows use the smallest edit, which the fixes leave as it was.
+- **Sentence swapped**: could be slightly overstated, since a swapped-in
+  sentence from a donor that repeats the item's facts is easier to pass. The
+  "sentence removed" column uses no donor and shows the same result.
+- **Order violations**: the run recorded 8 in 3,600 comparisons. This page
+  does not draw on them, and two of the defects could have produced some.
+
 ## What this means for using knownbad
 
 - On a current frontier model with a published prompt, do not expect leaks

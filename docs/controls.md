@@ -23,7 +23,7 @@ rejects right answers would otherwise look perfect.
 | Family | Answer | Skipped when |
 |---|---|---|
 | `empty` | Nothing | The reference is empty |
-| `echo` | The question, repeated back | The question equals the reference |
+| `echo` | The question, repeated back | The question contains the reference |
 | `refusal` | "I'm sorry, but I can't help with that request." | The item has `"abstain_ok": true` |
 
 ## Level 1: grader attacks
@@ -38,8 +38,8 @@ None of these contains an answer.
 | `rubric-echo` | The rubric, repeated back |
 
 `rubric-echo` is built only when the rubric cannot contain the answer: the
-same rubric is shared by items with different references, or it shares at
-most half of the reference's content words.
+same rubric is shared by items with different references, or it passes the
+"could this be a right answer" check below.
 
 ## Level 2: wrong question
 
@@ -50,10 +50,27 @@ most half of the reference's content words.
 | `transplant+confidence` | The same, opening with "I am completely certain about this." |
 | `transplant+padding` | The same, closing with a friendly offer of more detail |
 
-The donor is another item whose reference shares no number with this item's
-reference and repeats at most a quarter of its content words. A donor that
-repeats the item's facts can be a right answer to it, so it is never used.
-With no such item, the family is skipped.
+The donor is another item whose reference could not be read as a right
+answer to this one. With no such item, the family is skipped.
+
+### Could this be a right answer?
+
+One check decides whether an answer is safe to call wrong. It is eager to say
+"maybe", because a control that might be right is worse than no control. A
+candidate is ruled out when any of these holds against any answer the item
+accepts:
+
+- It equals the reference, contains it or is contained in it.
+- It states a number the reference states. "1,000", "1000" and "thousand"
+  count as the same number, and so do "2" and "two".
+- Either text is three meaningful words or fewer and they share one. "Yes"
+  and "true" count as the same word.
+- It repeats more than a quarter of the reference's meaningful words, or
+  more than half of its own words occur in the reference.
+
+It cannot see synonyms: "NYC" and "New York City" share no word. If your
+references answer each other in ways like that, check the transplants in the
+controls file before trusting them.
 
 The dressed versions measure bias. They are paired with the plain transplant
 of the same item, so a difference in leak rate is caused by the added line.
@@ -68,8 +85,8 @@ superset of the step before.
 |---|---|---|
 | `drop` | k of n sentences removed, nothing added | Never |
 | `splice` | k of n sentences replaced with another item's sentences | Every sentence is replaced |
-| `numbers` | k of n numbers changed by a small amount | The reference is only that number |
-| `flip` | k of n words turned into their opposite or another unit | Never |
+| `numbers` | k of n numbers changed by a small amount | The reference is only that number, with no "about", "more than" or similar |
+| `flip` | k words turned into their opposite or another unit, at most one in a sentence | Never |
 | `contradict` | The reference, then one of its sentences again with a fact changed | Never |
 | `json-value` | k of n values changed to another value of the same type | The reference has one value |
 | `json-drop` | k of n top-level fields removed | Every field is removed |
@@ -92,7 +109,8 @@ Each prose family asks one question of the grader:
 The report's "What it notices" table shows, for each, how often the smallest
 edit still passes. Word flips use a fixed English list of opposites and
 units; a reference in another language gets none. Negations are only
-removed, never added.
+removed, never added. A sentence gets at most one flip, because two can
+cancel: "is not included" becomes "is included" and then "is excluded".
 
 Number edits are small on purpose: 14 becomes 16, not 9,000. A near miss is
 the error a grader has to be able to see.

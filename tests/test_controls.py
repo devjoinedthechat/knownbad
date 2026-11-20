@@ -203,5 +203,5 @@ def test_the_example_controls_are_the_same_bytes_on_every_python(items_path, tmp
     out = tmp_path / "controls.jsonl"
     assert main(["gen", items_path, "-o", str(out)]) == 0
     assert hashlib.sha256(out.read_bytes()).hexdigest() == (
-        "8bc6eb27c4b9f5baf47cc47f01a6a9c56fd82fcd235fc4f93d55af162e74b839"
+        "68d4dc738ce5d08bb98b7578f0ea91aaff3ffddc95861ed5c4d234caa1e18eb2"
     )

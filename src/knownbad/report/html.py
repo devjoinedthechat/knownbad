@@ -310,7 +310,7 @@ def _e(value: Any) -> str:
 
 def _json(data: Any) -> str:
     """JSON that is safe inside a script element."""
-    text = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
+    text = json.dumps(data, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
     for raw, safe in (
         ("<", "\\u003c"),
         (">", "\\u003e"),

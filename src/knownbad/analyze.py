@@ -7,7 +7,7 @@ from collections.abc import Sequence
 from typing import Any
 
 from .controls import DOSE_FAMILIES
-from .model import FAIL, GOOD_LEVEL, PASS
+from .model import FAIL, GOOD_LEVEL, NOT_HIGHER, PASS
 from .runner import Outcome
 from .stats import rate
 
@@ -18,9 +18,15 @@ DOSE_BINS = ((0.0, 0.25), (0.25, 0.5), (0.5, 0.75), (0.75, 1.0))
 _EPS = 1e-9
 
 
-def _order_value(outcome: Outcome) -> float | None:
-    score = outcome.mean_score
-    return score if score is not None else outcome.pass_share
+def _order_values(ours: Outcome, base: Outcome) -> tuple[float | None, float | None]:
+    """The two numbers to compare: scores when both have one, else pass shares.
+
+    A score and a pass share are on different scales. Comparing a score of 3
+    out of 10 with a pass share of 1.0 would report a violation that is not one.
+    """
+    if ours.mean_score is not None and base.mean_score is not None:
+        return ours.mean_score, base.mean_score
+    return ours.pass_share, base.pass_share
 
 
 def _leak_table(outcomes: Sequence[Outcome], key: str) -> list[dict[str, Any]]:
@@ -86,12 +92,15 @@ def _order(outcomes: Sequence[Outcome], by_id: dict[str, Outcome]) -> dict[str, 
     broken: list[str] = []
     for outcome in outcomes:
         control = outcome.control
-        if control.family not in DOSE_FAMILIES or not control.base:
+        # Every control that claims "not better than its base", and every dose step.
+        if not control.base or not (
+            control.expect == NOT_HIGHER or control.family in DOSE_FAMILIES
+        ):
             continue
         base = by_id.get(control.base)
         if base is None:
             continue
-        ours, theirs = _order_value(outcome), _order_value(base)
+        ours, theirs = _order_values(outcome, base)
         if ours is None or theirs is None:
             continue
         pairs += 1
@@ -183,9 +192,20 @@ def summarise(outcomes: Sequence[Outcome]) -> dict[str, Any]:
     must_fail = [o for o in graded if o.control.expect == FAIL]
     overall = rate(sum(1 for o in must_fail if o.passed), len(must_fail))
 
+    reference_total = sum(1 for o in outcomes if o.control.expect == PASS)
     void: str | None = None
     if outcomes and not graded:
         void = "The grader returned no verdict for any control."
+    elif errors > len(outcomes) / 2:
+        void = (
+            f"The grader returned no verdict for {errors} of {len(outcomes)} controls. "
+            "Too few were graded to say anything."
+        )
+    elif reference_total and len(good) < reference_total / 2:
+        void = (
+            f"Only {len(good)} of {reference_total} reference answers got a verdict. Without "
+            "them there is no check that the grader accepts right answers."
+        )
     elif references["rate"] is not None and references["rate"] < VOID_BELOW:
         void = (
             f"The grader passed only {references['k']} of {references['n']} reference "

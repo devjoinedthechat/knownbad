@@ -18,3 +18,6 @@ First release.
 - A terminal report and a single-file HTML report read as a plate of controls.
 - `check()` for use inside a test suite, and a GitHub Action.
 - Exit codes for CI and a frozen controls file.
+- One check, "could this be a right answer", guards every control that is
+  called wrong. It was tightened after an independent review found twelve
+  cases where a claim could be false.

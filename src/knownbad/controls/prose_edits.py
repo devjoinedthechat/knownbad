@@ -12,6 +12,7 @@ sentence or a flipped word matters is up to the rubric.
 
 from __future__ import annotations
 
+import random
 import re
 
 from ..model import NOT_HIGHER, Control, Item
@@ -70,9 +71,40 @@ for _a, _b in _PAIRS:
         _SWAP.setdefault(_b, _a)
 _SWAP["can"] = "cannot"
 _FLIPPABLE = re.compile(
-    r"\b(" + "|".join(re.escape(w) for w in sorted(_SWAP, key=len, reverse=True)) + r")\b",
-    re.IGNORECASE,
+    r"(?<![\w'’])(" + "|".join(re.escape(w) for w in sorted(_SWAP, key=len, reverse=True)) + r")"
+    r"(?![\w'’])",
+    re.IGNORECASE | re.ASCII,
 )
+# "the can", "a can of": a noun, not the verb.
+_NOUN_CAN = re.compile(r"\b(?:a|the|this|that|each|every|per|one)\s+$", re.IGNORECASE)
+
+
+def flippable(text: str) -> list[re.Match[str]]:
+    """Words in `text` whose opposite can be put in their place."""
+    found = []
+    for match in _FLIPPABLE.finditer(text):
+        word = match.group().lower()
+        if word not in _SWAP:
+            continue
+        if word == "can" and _NOUN_CAN.search(text[: match.start()]):
+            continue
+        found.append(match)
+    return found
+
+
+def _one_per_sentence(text: str, seed_source: random.Random) -> list[re.Match[str]]:
+    """At most one flippable word from each sentence.
+
+    Two flips in one sentence can cancel: "is not included" becomes "is
+    included" and then "is excluded", which says what the reference said. One
+    flip per sentence cannot be undone by a later step.
+    """
+    by_sentence: dict[int, list[re.Match[str]]] = {}
+    ends = [m.end() for m in re.finditer(r"[.!?](?=\s|$)|\n", text)]
+    for match in flippable(text):
+        sentence = sum(1 for end in ends if end <= match.start())
+        by_sentence.setdefault(sentence, []).append(match)
+    return [seed_source.choice(group) for _, group in sorted(by_sentence.items())]
 
 
 def _like(original: str, replacement: str) -> str:
@@ -124,10 +156,11 @@ def flip(item: Item, seed: int) -> list[Control]:
     """Turn k of n words into their opposite: can -> cannot, days -> weeks."""
     if not item.reference:
         return []
-    found = list(_FLIPPABLE.finditer(item.reference))
+    source = rng(seed, item.id, "flip")
+    found = _one_per_sentence(item.reference, source)
     if not found:
         return []
-    order = rng(seed, item.id, "flip").sample(range(len(found)), len(found))
+    order = source.sample(range(len(found)), len(found))
     made: list[Control] = []
     base = cid(item, "reference")
     for step in dose_steps(len(found)):
@@ -141,7 +174,8 @@ def flip(item: Item, seed: int) -> list[Control]:
             answer=replace_matches(item.reference, swaps, found),
             how=(
                 f"{step} of {len(found)} words in the reference turned into their opposite "
-                "or another unit. It cannot be better than the answer with fewer words turned."
+                "or another unit, at most one in a sentence. It cannot be better than the "
+                "answer with fewer words turned."
             ),
             base=base,
             dose=step / len(found),
@@ -165,7 +199,7 @@ def contradict(item: Item, seed: int) -> list[Control]:
             changed = {pick: bump_number(found[pick].group(), source)}
             candidates.append(replace_matches(sentence, changed, found))
             continue
-        words = list(_FLIPPABLE.finditer(sentence))
+        words = flippable(sentence)
         if words:
             pick = source.randrange(len(words))
             candidates.append(replace_matches(sentence, {pick: flip_word(words[pick])}, words))

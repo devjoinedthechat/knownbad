@@ -89,7 +89,7 @@ def test_cli_cache_round_trip(tmp_path, items_path, graders_path, capsys):
     args = ["run", items_path, "--grader", f"{graders_path}:loose", "--cache", str(cache)]
     assert main([*args, "-o", str(out)]) == 0
     first = json.loads(out.read_text())["summary"]
-    assert " of 499 verdicts came from" in capsys.readouterr().out
+    assert " of 493 verdicts came from" in capsys.readouterr().out
     assert main([*args, "-o", str(out)]) == 0
-    assert "499 of 499 verdicts came from" in capsys.readouterr().out
+    assert "493 of 493 verdicts came from" in capsys.readouterr().out
     assert json.loads(out.read_text())["summary"] == first

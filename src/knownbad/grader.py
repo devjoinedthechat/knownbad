@@ -11,6 +11,7 @@ from __future__ import annotations
 import importlib
 import importlib.util
 import json
+import math
 import subprocess
 import sys
 from collections.abc import Callable
@@ -32,6 +33,8 @@ def to_verdict(raw: Any, pass_score: float) -> Verdict:
     if isinstance(raw, bool):
         return Verdict(passed=raw)
     if isinstance(raw, (int, float)):
+        if not math.isfinite(raw):
+            return Verdict(passed=None, error=f"the score is not a number: {raw!r}")
         return Verdict(passed=raw >= pass_score, score=float(raw))
     if isinstance(raw, str):
         word = raw.strip().lower()
@@ -42,7 +45,10 @@ def to_verdict(raw: Any, pass_score: float) -> Verdict:
         return Verdict(passed=None, error=f"cannot read verdict from text {raw[:80]!r}")
     if isinstance(raw, dict):
         score = raw.get("score")
-        if isinstance(score, bool) or not isinstance(score, (int, float)):
+        if isinstance(score, (int, float)) and not isinstance(score, bool):
+            if not math.isfinite(score):
+                return Verdict(passed=None, error=f"the score is not a number: {score!r}")
+        else:
             score = None
         passed = raw.get("passed", raw.get("pass"))
         if isinstance(passed, str):

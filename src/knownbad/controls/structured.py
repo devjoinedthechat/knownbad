@@ -8,6 +8,7 @@ number doses for such items.
 from __future__ import annotations
 
 import json
+import math
 import random
 from typing import Any
 
@@ -62,13 +63,17 @@ def _wrong_value(value: Any, others: list[str], source: random.Random) -> Any:
     if isinstance(value, int):
         return int(bump_number(str(abs(value)), source)) * (-1 if value < 0 else 1)
     if isinstance(value, float):
+        if not math.isfinite(value):
+            return value  # NaN and infinity have no near miss
         text = repr(abs(value))
         if "e" in text or "." not in text:
             return value + 1.0
         return float(bump_number(text, source)) * (-1 if value < 0 else 1)
     if isinstance(value, str):
+        # Never another value from the same reference: swapping two list
+        # entries twice gives the right list back in another order.
         different = [other for other in others if other != value]
-        return source.choice(different) if different else value
+        return source.choice(different) if different else f"{value} (other)"
     return value  # null: there is no wrong null
 
 
@@ -99,15 +104,18 @@ def build(item: Item, donor: Item | None, seed: int) -> list[Control]:
 
     # Change k of n values, keeping each value's type.
     leaves = _leaves(root)
-    strings = [v for _, v in leaves if isinstance(v, str)]
+    own_strings = {v for _, v in leaves if isinstance(v, str)}
     donor_root = parse(donor.reference) if donor else None
-    if donor_root is not None:
-        strings += [v for _, v in _leaves(donor_root) if isinstance(v, str)]
+    strings = sorted(
+        {v for _, v in _leaves(donor_root) if isinstance(v, str)} - own_strings
+        if donor_root is not None
+        else set()
+    )
     source = rng(seed, item.id, "json-value")
     changes: list[tuple[Path, Any]] = []
     for path, value in leaves:
         wrong = _wrong_value(value, strings, source)
-        if wrong != value or type(wrong) is not type(value):
+        if wrong is not value and wrong != value:
             changes.append((path, wrong))
     source.shuffle(changes)
     base = base_id

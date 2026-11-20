@@ -43,7 +43,8 @@ third, two thirds and all, so it has no reading in the lowest range.
 
 A dose control must not score above the step before it. A violation means
 the grader rewarded a more damaged answer. With repeated trials the mean
-score is compared, so noise is averaged out first.
+score is compared, so noise is averaged out first. Scores are compared only
+when both answers have one; otherwise the pass shares are.
 
 ## Dressing lift
 
@@ -68,8 +69,8 @@ the flips (McNemar's exact test).
 
 ## What voids a run
 
-- The grader returned no verdict for any control.
-- Fewer than half the references passed.
+- The grader returned no verdict for more than half the controls.
+- Fewer than half the references got a verdict, or fewer than half passed.
 - No must-fail control was graded.
 
 A control with no verdict is never counted as caught. It is left out of

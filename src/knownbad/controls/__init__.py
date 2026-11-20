@@ -8,15 +8,17 @@ repo and reused as the fixed weight a grader is checked against.
 from __future__ import annotations
 
 import random
+import re
 from collections import Counter
 from collections.abc import Callable, Iterable, Sequence
 
 from ..model import FAIL, GOOD_LEVEL, NOT_HIGHER, PASS, Control, Item
 from ..text import (
+    HEDGES,
     bump_number,
+    may_answer,
     normalise,
     numbers,
-    overlap,
     replace_matches,
     same_answer,
     sentences,
@@ -70,8 +72,6 @@ FAMILIES = (
     "json-value",
     "json-drop",
 )
-# Share of an item's content words a donor reference may repeat.
-MAX_DONOR_OVERLAP = 0.25
 DOSE_FAMILIES = ("drop", "splice", "numbers", "flip", "json-value", "json-drop")
 
 
@@ -80,20 +80,18 @@ def _pick_donor(item: Item, pool: Sequence[Item], source: random.Random) -> Item
     if not item.reference:
         return None
 
-    own = item.reference
-    own_numbers = {m.group() for m in numbers(own)}
+    # Every answer the item accepts. An Inspect task may list several targets.
+    accepted = [item.reference, *(str(a) for a in item.meta.get("accepted", ()))]
 
     def usable(other: Item) -> bool:
         theirs = other.reference
-        if other.id == item.id or not theirs or same_answer(theirs, own):
+        if other.id == item.id or not theirs:
             return False
         # A donor that repeats this item's facts can be a right answer to it:
         # "return it within 30 days" answers "how long do I have to return a
         # tent?" wherever it comes from. Such a donor would make a control
         # that is not certainly wrong, so it is not used.
-        if own_numbers & {m.group() for m in numbers(theirs)}:
-            return False
-        return overlap(own, theirs) <= MAX_DONOR_OVERLAP
+        return not any(may_answer(theirs, right) for right in accepted)
 
     # A few random draws find a donor in any normal set; the full scan only
     # runs for sets where almost every reference is the same.
@@ -163,7 +161,7 @@ def _attacks(item: Item, generic_rubrics: set[str]) -> list[Control]:
     made.append(("claim", CLAIM, "Asserts that it is correct. Contains no answer."))
     if item.rubric:
         holds_no_answer = item.rubric in generic_rubrics or (
-            item.reference is not None and overlap(item.reference, item.rubric) <= 0.5
+            item.reference is not None and not may_answer(item.rubric, item.reference)
         )
         if holds_no_answer:
             made.append(
@@ -272,7 +270,16 @@ def _numbers(item: Item, seed: int) -> list[Control]:
     order = source.sample(range(len(found)), len(found))
     changed = {index: bump_number(found[index].group(), source) for index in order}
     # A reference that is only a number, like "14 days", is wrong once the number is.
-    bare = len(found) == 1 and len(words_without_numbers(item.reference)) <= 3
+    # "About 300 million" with 303 is still right, and so is "more than 100" with
+    # 97. A leading "1." is a list marker, not the answer.
+    rest = [w.lower() for w in words_without_numbers(item.reference)]
+    bare = (
+        len(found) == 1
+        and len(rest) <= 3
+        and not HEDGES & set(rest)
+        and not re.match(r"\s*\d+[.)]\s", item.reference)
+        and not re.search(r"[~≈<>≤≥±]", item.reference)
+    )
     made: list[Control] = []
     base = cid(item, "reference")
     for step in dose_steps(len(found)):
@@ -344,6 +351,10 @@ def build(
             # A control that reads as the reference is not a negative control.
             if control.expect == FAIL and reference is not None:
                 if normalise(control.answer) == normalise(reference):
+                    continue
+                # "Correct the grammar if needed: 'She goes to school.'" echoed back
+                # contains the right answer, so the echo is not certainly wrong.
+                if control.family == "echo" and normalise(reference) in normalise(item.input):
                     continue
             controls.append(control)
 

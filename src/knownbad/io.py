@@ -7,7 +7,7 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
-from .model import Control, Item
+from .model import Control, Item, as_text
 
 
 def read_jsonl(path: str | Path) -> list[dict[str, Any]]:
@@ -67,7 +67,7 @@ def read_harvested(path: str | Path, items: dict[str, Item]) -> list[Control]:
                 family="harvested" if expect == "fail" else "harvested-good",
                 level="4",
                 expect=expect,
-                answer=str(row["answer"]),
+                answer=as_text(row["answer"]),
                 how=str(row.get("note") or "Labeled by hand or by a deterministic check."),
             )
         )
@@ -75,7 +75,7 @@ def read_harvested(path: str | Path, items: dict[str, Item]) -> list[Control]:
 
 
 def write_json(path: str | Path, data: Any) -> None:
-    write_text(path, json.dumps(data, ensure_ascii=False, indent=1) + "\n")
+    write_text(path, json.dumps(data, ensure_ascii=False, indent=1, allow_nan=False) + "\n")
 
 
 def write_text(path: str | Path, text: str) -> None:

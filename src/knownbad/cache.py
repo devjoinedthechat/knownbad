@@ -13,6 +13,7 @@ name, so delete the cache when either changes.
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 import threading
 from pathlib import Path
@@ -27,11 +28,24 @@ def fingerprint(grader_spec: str | None, command: str | None, pass_score: float)
     if grader_spec:
         target, _, name = grader_spec.rpartition(":")
         digest.update(name.encode())
-        path = Path(target)
-        digest.update(path.read_bytes() if path.is_file() else target.encode())
+        digest.update(_source_bytes(target))
     if command:
         digest.update(command.encode())
     return digest.hexdigest()[:16]
+
+
+def _source_bytes(target: str) -> bytes:
+    """The bytes of the grader's source, for a file path or a module name."""
+    path = Path(target)
+    if path.is_file():
+        return path.read_bytes()
+    try:
+        spec = importlib.util.find_spec(target)
+    except (ImportError, ValueError):
+        spec = None
+    if spec is not None and spec.origin and Path(spec.origin).is_file():
+        return Path(spec.origin).read_bytes()
+    return target.encode()
 
 
 class Cache:
@@ -49,7 +63,7 @@ class Cache:
                     try:
                         row = json.loads(line)
                         self._seen[row["key"]] = Verdict.from_dict(row["verdict"])
-                    except (ValueError, KeyError, TypeError):
+                    except (ValueError, KeyError, TypeError, AttributeError):
                         continue  # a line cut off by a crash; the call is simply made again
 
     def key(self, item: Item, control: Control, trial: int) -> str:

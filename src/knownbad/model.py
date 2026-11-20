@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
@@ -13,6 +14,12 @@ EXPECTATIONS = (FAIL, PASS, NOT_HIGHER)
 
 GOOD_LEVEL = "good"
 LEVELS = (GOOD_LEVEL, "0", "1", "2", "3", "4")
+
+
+def as_text(value: Any) -> str:
+    """A field as the text a grader would see. Objects, lists, numbers and
+    booleans are written as JSON, so {"ok": true} stays {"ok": true}."""
+    return value if isinstance(value, str) else json.dumps(value, ensure_ascii=False)
 
 
 @dataclass(frozen=True)
@@ -33,11 +40,12 @@ class Item:
         meta = dict(raw.get("meta") or {})
         # Unknown top-level keys are kept, so a grader still sees its own fields.
         meta.update({k: v for k, v in raw.items() if k not in known})
+        reference, rubric = raw.get("reference"), raw.get("rubric")
         return cls(
             id=str(raw["id"]),
-            input=str(raw["input"]),
-            reference=None if raw.get("reference") is None else str(raw["reference"]),
-            rubric=None if raw.get("rubric") is None else str(raw["rubric"]),
+            input=as_text(raw["input"]),
+            reference=None if reference is None else as_text(reference),
+            rubric=None if rubric is None else as_text(rubric),
             meta=meta,
         )
 

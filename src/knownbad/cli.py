@@ -42,6 +42,8 @@ def _level_limits(pairs: list[str]) -> dict[str, float]:
     limits: dict[str, float] = {}
     for pair in pairs:
         level, _, value = pair.partition("=")
+        if level.strip() not in ("0", "1", "2", "3", "4"):
+            raise UsageError(f"--max-leak-level: there is no level {level.strip()!r}; use 0 to 4")
         try:
             limits[level.strip()] = float(value)
         except ValueError:
@@ -198,7 +200,7 @@ def cmd_inspect(args: argparse.Namespace) -> int:
 
 def cmd_report(args: argparse.Namespace) -> int:
     result = read_json(args.result)
-    if result.get("schema") != SCHEMA:
+    if not isinstance(result, dict) or result.get("schema") != SCHEMA:
         raise UsageError(f"{args.result} is not a knownbad result file of schema {SCHEMA}")
     if args.recompute:
         outcomes = [Outcome.from_dict(o) for o in result["outcomes"]]
