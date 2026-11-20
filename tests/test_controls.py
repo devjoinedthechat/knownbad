@@ -190,3 +190,18 @@ def test_no_transplant_when_every_other_item_repeats_the_facts():
     ]
     assert by_family(build(pool), "transplant") == []
     assert by_family(build(pool), "splice") == []
+
+
+def test_the_example_controls_are_the_same_bytes_on_every_python(items_path, tmp_path):
+    # A frozen controls file is only a fixed weight if every machine builds the
+    # same one. This hash was produced on Python 3.10, 3.12 and 3.14. If a change
+    # to a builder moves it, say so in the changelog: files frozen earlier differ.
+    import hashlib
+
+    from knownbad.cli import main
+
+    out = tmp_path / "controls.jsonl"
+    assert main(["gen", items_path, "-o", str(out)]) == 0
+    assert hashlib.sha256(out.read_bytes()).hexdigest() == (
+        "8bc6eb27c4b9f5baf47cc47f01a6a9c56fd82fcd235fc4f93d55af162e74b839"
+    )

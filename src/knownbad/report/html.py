@@ -58,9 +58,9 @@ SLOT_GROUPS = (
     ("harvested-good", "4 yours, good", "your known-good"),
 )
 DOSE_NAMES = {
-    "drop": ("Removal", "Sentences removed"),
-    "flip": ("Reversal", "Words reversed"),
-    "splice": ("Swap", "Sentences swapped"),
+    "drop": ("Removed", "Sentences removed"),
+    "flip": ("Reversed", "Words reversed"),
+    "splice": ("Swapped", "Sentences swapped"),
     "numbers": ("Numbers", "Numbers changed"),
     "json-value": ("Values", "Values changed"),
     "json-drop": ("Fields", "Fields removed"),
@@ -194,7 +194,8 @@ align-items:start}
 .two ul{margin:26px 0 0;padding:0;list-style:none}
 .two li{padding:12px 0;border-top:1px solid var(--hair)}
 .two li b{display:block;font-size:13px;color:var(--muted);font-weight:400}
-.key{display:flex;gap:20px;font-size:12.5px;color:var(--ink-2);margin:0 0 2px}
+.key{display:flex;flex-wrap:wrap;gap:4px 20px;font-size:12.5px;color:var(--ink-2);margin:0 0 6px}
+.key span{white-space:nowrap}
 .key svg{vertical-align:middle;margin-right:6px}
 svg text{font:12px var(--sans);fill:var(--muted)}
 svg .lab{fill:var(--ink);font-weight:600}
@@ -599,7 +600,7 @@ def _dose(summary: dict[str, Any]) -> str:
             f'stroke="var(--ink)" stroke-width="2" {dash}/><circle cx="15" cy="5" r="3.5" '
             f'fill="{fill}" stroke="var(--ink)" stroke-width="2"/></svg>{_e(name)}</span>'
         )
-        ends.append((points[-1][1], name.split()[0]))
+        ends.append((points[-1][1], DOSE_NAMES.get(family, (family, family))[0]))
     placed = -100.0
     for end_y, name in sorted(ends):
         placed = max(end_y + 4, placed + 16)

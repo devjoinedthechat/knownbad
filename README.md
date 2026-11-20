@@ -1,6 +1,34 @@
-# knownbad
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.svg">
+    <img src="assets/logo-light.svg" alt="" width="112" height="112">
+  </picture>
+</p>
 
-**Negative controls for evals. Find out what your grader actually checks.**
+<h1 align="center">knownbad</h1>
+
+<p align="center">
+  <b>Negative controls for evals.</b><br>
+  Find out what your grader actually checks.
+</p>
+
+<p align="center">
+  <a href="https://github.com/devjoinedthechat/knownbad/actions/workflows/ci.yml"><img src="https://github.com/devjoinedthechat/knownbad/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-e8367f" alt="MIT licence"></a>
+  <img src="https://img.shields.io/badge/python-%E2%89%A5%203.10-e8367f" alt="Python >= 3.10">
+  <img src="https://img.shields.io/badge/runtime%20dependencies-none-e8367f" alt="No runtime dependencies">
+</p>
+
+<p align="center">
+  <a href="#what-we-measured">What we measured</a> ·
+  <a href="#why">Why</a> ·
+  <a href="#quick-start">Quick start</a> ·
+  <a href="#the-controls">The controls</a> ·
+  <a href="#in-a-test-suite">In a test suite</a> ·
+  <a href="#use-it-in-ci">CI</a> ·
+  <a href="#inspect-ai-tasks">Inspect AI</a> ·
+  <a href="#limits">Limits</a>
+</p>
 
 An eval grader is a measuring instrument: an LLM judge, a rubric, a test
 function. knownbad checks it the way a lab checks an assay, with samples whose

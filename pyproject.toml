@@ -12,9 +12,25 @@ requires-python = ">=3.10"
 dependencies = []
 keywords = ["evals", "llm", "llm-as-judge", "grader", "testing"]
 classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Science/Research",
   "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Typing :: Typed",
   "Topic :: Software Development :: Testing",
 ]
+
+[project.urls]
+Repository = "https://github.com/devjoinedthechat/knownbad"
+Findings = "https://github.com/devjoinedthechat/knownbad/blob/main/docs/findings.md"
+Changelog = "https://github.com/devjoinedthechat/knownbad/blob/main/CHANGELOG.md"
+Issues = "https://github.com/devjoinedthechat/knownbad/issues"
 
 [project.optional-dependencies]
 inspect = ["inspect-ai>=0.3.100"]
@@ -27,6 +43,9 @@ dev = ["pytest>=8", "pytest-cov>=5", "hypothesis>=6", "mypy>=1.10", "ruff>=0.6",
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/knownbad"]
+
+[tool.hatch.build.targets.sdist]
+include = ["/src", "/tests", "/examples", "/docs", "/assets", "/README.md", "/CHANGELOG.md", "/LICENSE"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -51,6 +70,11 @@ files = ["src"]
 [[tool.mypy.overrides]]
 module = ["inspect_ai", "inspect_ai.*"]
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# Without Inspect AI installed its decorators are untyped; the adapter still has to check.
+module = ["knownbad.inspect_adapter"]
+disallow_untyped_decorators = false
 
 [tool.coverage.run]
 source = ["knownbad"]

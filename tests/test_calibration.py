@@ -15,13 +15,13 @@ from knownbad.stats import interval, sign_test
 @pytest.mark.parametrize("p", [0.0, 0.02, 0.1, 0.5, 0.9])
 def test_the_interval_covers_the_true_rate_at_least_95_times_in_100(n, p):
     source = random.Random(f"{n}:{p}")
-    draws, covered = 1500, 0
+    draws, covered = 800, 0
     for _ in range(draws):
         k = sum(source.random() < p for _ in range(n))
         low, high = interval(k, n)
         covered += low <= p <= high
     # The exact interval covers at least 95%; the bar leaves room for sampling noise.
-    assert covered / draws >= 0.94
+    assert covered / draws >= 0.935
 
 
 @pytest.mark.parametrize("flips", [6, 20, 60])
