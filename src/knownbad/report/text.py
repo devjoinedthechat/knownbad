@@ -11,7 +11,12 @@ LEVEL_NAMES = {
     "3": "edited reference",
     "4": "harvested",
 }
-DOSE_UNITS = {"splice": "sentences replaced", "numbers": "numbers changed"}
+DOSE_UNITS = {
+    "splice": "sentences replaced",
+    "numbers": "numbers changed",
+    "json-value": "values changed",
+    "json-drop": "fields removed",
+}
 
 
 def pct(value: float | None) -> str:
@@ -67,6 +72,14 @@ def render(result: dict[str, Any], limit: int = 8) -> str:
         out(f"Reference answers passed   {refs['k']} / {refs['n']}   {pct(refs['rate'])}")
         out("")
 
+    same = summary.get("consistency") or {}
+    if same.get("n"):
+        out(
+            f"Same verdict every trial   {same['k']} / {same['n']}   {pct(same['rate'])}"
+            "   (a split verdict means the grader is guessing on that answer)"
+        )
+        out("")
+
     if summary["families"]:
         out("Wrong answers that passed")
         out(f"  {'level':<21}{'control':<24}{'leaked':>11}{'rate':>7}   95% interval")
@@ -82,9 +95,9 @@ def render(result: dict[str, Any], limit: int = 8) -> str:
     if summary["dose"]:
         out("Detection threshold")
         for family, curve in summary["dose"].items():
-            out(f"  {family:<9} {threshold_sentence(family, curve)}")
+            out(f"  {family:<10} {threshold_sentence(family, curve)}")
             steps = " · ".join(f"{dose_label(p)} {pct(p['rate'])}" for p in curve["points"])
-            out(f"            pass rate by dose: {steps}")
+            out(f"             pass rate by dose: {steps}")
         out("")
 
     order = summary["order"]

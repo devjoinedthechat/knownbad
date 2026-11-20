@@ -45,12 +45,28 @@ FIXED_GROUPS: tuple[tuple[str, tuple[tuple[str, str], ...]], ...] = (
             ("transplant+padding", "+ padding"),
         ),
     ),
+    ("3 broken", (("json-truncated", "truncated"),)),
 )
 SLOT_GROUPS = (
     ("splice", "3 sentences →", "sentences swapped"),
     ("numbers", "3 numbers →", "numbers changed"),
+    ("json-value", "3 values →", "values changed"),
+    ("json-drop", "3 fields →", "fields removed"),
     ("harvested", "4 yours", "your known-bad"),
     ("harvested-good", "4 yours, good", "your known-good"),
+)
+DOSE_NAMES = {
+    "splice": ("Sentences", "Sentences swapped"),
+    "numbers": ("Numbers", "Numbers changed"),
+    "json-value": ("Values", "Values changed"),
+    "json-drop": ("Fields", "Fields removed"),
+}
+# Lines are told apart by dash and marker, never by colour.
+DOSE_STYLES = (
+    ("", "var(--ink)"),
+    ('stroke-dasharray="5 4"', "var(--page)"),
+    ('stroke-dasharray="1 4" stroke-linecap="round"', "var(--ink)"),
+    ('stroke-dasharray="9 3 2 3"', "var(--page)"),
 )
 STATE_WORDS = {
     "ok": "as expected",
@@ -334,7 +350,7 @@ def _layout(outcomes: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], dict[
         if columns:
             groups.append({"label": "" if label == "good" else label, "columns": columns})
     for family, label, long_name in SLOT_GROUPS:
-        count = min(slots.get(family, 0), MAX_SLOTS if family in ("splice", "numbers") else 8)
+        count = min(slots.get(family, 0), MAX_SLOTS if family in DOSE_NAMES else 8)
         if count:
             columns = [
                 ((family, s), str(s + 1), f"{long_name}, step {s + 1}") for s in range(count)
@@ -490,7 +506,6 @@ def _readings(summary: dict[str, Any]) -> str:
         items.append(
             ("References passed", f"{refs['k']}/{refs['n']}", "right answers the grader accepted")
         )
-    names = {"splice": "Sentences", "numbers": "Numbers"}
     for family, curve in summary["dose"].items():
         threshold = curve["threshold"]
         if threshold is None:
@@ -502,9 +517,14 @@ def _readings(summary: dict[str, Any]) -> str:
                 else f"{threshold[0] * 100:.0f}–{pct(threshold[1])}"
             )
             small = "changed before it fails half"
-        items.append((f"{names.get(family, family)} threshold", value, small))
+        items.append((f"{DOSE_NAMES.get(family, (family,))[0]} threshold", value, small))
     if order["n"]:
         items.append(("Order violations", str(order["k"]), f"of {order['n']} edited answers"))
+    same = summary.get("consistency") or {}
+    if same.get("n"):
+        items.append(
+            ("Same verdict every trial", pct(same["rate"]), f"{same['k']} of {same['n']} answers")
+        )
     return (
         '<dl class="readings">'
         + "".join(
@@ -546,10 +566,6 @@ def _dose(summary: dict[str, Any]) -> str:
     def y(share: float) -> float:
         return bottom - (bottom - top) * share
 
-    style = {
-        "splice": ("", "var(--ink)", "Sentences swapped"),
-        "numbers": ('stroke-dasharray="5 4"', "var(--page)", "Numbers changed"),
-    }
     svg = [
         '<svg viewBox="0 0 620 236" width="100%" role="img" '
         'aria-label="Pass rate against the share of the reference that was corrupted">',
@@ -569,8 +585,9 @@ def _dose(summary: dict[str, Any]) -> str:
         "</g>",
     ]
     key, ends = [], []
-    for family, curve in curves.items():
-        dash, fill, name = style.get(family, ("", "var(--ink)", family))
+    for index, (family, curve) in enumerate(curves.items()):
+        dash, fill = DOSE_STYLES[index % len(DOSE_STYLES)]
+        name = DOSE_NAMES.get(family, (family, family))[1]
         points = [(x(p["dose_high"]), y(p["rate"]), p) for p in curve["points"]]
         line = " ".join(f"{px:.1f},{py:.1f}" for px, py, _ in points)
         svg.append(
@@ -594,9 +611,8 @@ def _dose(summary: dict[str, Any]) -> str:
         placed = max(end_y + 4, placed + 16)
         svg.append(f'<text class="lab" x="{right + 12}" y="{placed:.1f}">{_e(name)}</text>')
     svg.append("</svg>")
-    names = {"splice": "Sentences swapped", "numbers": "Numbers changed"}
     facts = "".join(
-        f"<li><b>{_e(names.get(family, family))}</b>"
+        f"<li><b>{_e(DOSE_NAMES.get(family, (family, family))[1])}</b>"
         f"{_e(threshold_sentence(family, curve).capitalize())}.</li>"
         for family, curve in curves.items()
     )

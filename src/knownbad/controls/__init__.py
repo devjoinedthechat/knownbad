@@ -7,7 +7,6 @@ repo and reused as the fixed weight a grader is checked against.
 
 from __future__ import annotations
 
-import math
 import random
 from collections import Counter
 from collections.abc import Callable, Iterable, Sequence
@@ -23,6 +22,8 @@ from ..text import (
     sentences,
     words_without_numbers,
 )
+from . import structured
+from ._common import cid, dose_steps, rng
 
 REFUSAL = "I'm sorry, but I can't help with that request."
 CLAIM = (
@@ -62,27 +63,14 @@ FAMILIES = (
     "transplant+padding",
     "splice",
     "numbers",
+    "json-truncated",
+    "json-value",
+    "json-drop",
 )
-DOSE_FAMILIES = ("splice", "numbers")
-MAX_DOSE_STEPS = 4
+DOSE_FAMILIES = ("splice", "numbers", "json-value", "json-drop")
 
 
-def _rng(seed: int, item_id: str, family: str) -> random.Random:
-    # A string seed is hashed the same way on every run and platform.
-    return random.Random(f"{seed}\x1f{item_id}\x1f{family}")
-
-
-def _cid(item: Item, family: str, step: int | None = None) -> str:
-    return f"{item.id}::{family}" if step is None else f"{item.id}::{family}@{step}"
-
-
-def _dose_steps(units: int) -> list[int]:
-    """Up to four nested steps ending at `units`: 5 -> [2, 3, 4, 5]."""
-    quarters = (i / MAX_DOSE_STEPS for i in range(1, MAX_DOSE_STEPS + 1))
-    return sorted({max(1, math.ceil(units * q)) for q in quarters})
-
-
-def _pick_donor(item: Item, pool: Sequence[Item], rng: random.Random) -> Item | None:
+def _pick_donor(item: Item, pool: Sequence[Item], source: random.Random) -> Item | None:
     """Another item whose reference cannot be read as an answer to this one."""
     if not item.reference:
         return None
@@ -96,10 +84,10 @@ def _pick_donor(item: Item, pool: Sequence[Item], rng: random.Random) -> Item | 
     # A few random draws find a donor in any normal set; the full scan only
     # runs for sets where almost every reference is the same.
     for _ in range(32):
-        other = pool[rng.randrange(len(pool))]
+        other = pool[source.randrange(len(pool))]
         if usable(other):
             return other
-    start = rng.randrange(len(pool))
+    start = source.randrange(len(pool))
     for offset in range(len(pool)):
         other = pool[(start + offset) % len(pool)]
         if usable(other):
@@ -121,7 +109,7 @@ def _reference(item: Item) -> list[Control]:
         return []
     return [
         Control(
-            id=_cid(item, "reference"),
+            id=cid(item, "reference"),
             item_id=item.id,
             family="reference",
             level=GOOD_LEVEL,
@@ -141,7 +129,7 @@ def _degenerate(item: Item) -> list[Control]:
         made.append(("refusal", REFUSAL, "A refusal. Skipped for items marked abstain_ok."))
     return [
         Control(
-            id=_cid(item, family),
+            id=cid(item, family),
             item_id=item.id,
             family=family,
             level="0",
@@ -174,7 +162,7 @@ def _attacks(item: Item, generic_rubrics: set[str]) -> list[Control]:
             )
     return [
         Control(
-            id=_cid(item, family),
+            id=cid(item, family),
             item_id=item.id,
             family=family,
             level="1",
@@ -190,7 +178,7 @@ def _transplants(item: Item, donor: Item | None) -> list[Control]:
     if donor is None or not donor.reference:
         return []
     plain = Control(
-        id=_cid(item, "transplant"),
+        id=cid(item, "transplant"),
         item_id=item.id,
         family="transplant",
         level="2",
@@ -200,7 +188,7 @@ def _transplants(item: Item, donor: Item | None) -> list[Control]:
     )
     dressed = [
         Control(
-            id=_cid(item, f"transplant+{name}"),
+            id=cid(item, f"transplant+{name}"),
             item_id=item.id,
             family=f"transplant+{name}",
             level="2",
@@ -222,11 +210,11 @@ def _splice(item: Item, donor: Item | None, seed: int) -> list[Control]:
     foreign = sentences(donor.reference)
     if len(own) < 2 or not foreign:
         return []
-    rng = _rng(seed, item.id, "splice")
-    order = rng.sample(range(len(own)), len(own))
+    source = rng(seed, item.id, "splice")
+    order = source.sample(range(len(own)), len(own))
     made: list[Control] = []
-    base = _cid(item, "reference")
-    for step in _dose_steps(len(own)):
+    base = cid(item, "reference")
+    for step in dose_steps(len(own)):
         mixed = list(own)
         for slot, position in enumerate(order[:step]):
             mixed[position] = foreign[slot % len(foreign)]
@@ -235,7 +223,7 @@ def _splice(item: Item, donor: Item | None, seed: int) -> list[Control]:
             return []  # the two references share their sentences; nothing was corrupted
         full = step == len(own)
         control = Control(
-            id=_cid(item, "splice", step),
+            id=cid(item, "splice", step),
             item_id=item.id,
             family="splice",
             level="3",
@@ -266,17 +254,17 @@ def _numbers(item: Item, seed: int) -> list[Control]:
     found = numbers(item.reference)
     if not found:
         return []
-    rng = _rng(seed, item.id, "numbers")
-    order = rng.sample(range(len(found)), len(found))
-    changed = {index: bump_number(found[index].group(), rng) for index in order}
+    source = rng(seed, item.id, "numbers")
+    order = source.sample(range(len(found)), len(found))
+    changed = {index: bump_number(found[index].group(), source) for index in order}
     # A reference that is only a number, like "14 days", is wrong once the number is.
     bare = len(found) == 1 and len(words_without_numbers(item.reference)) <= 3
     made: list[Control] = []
-    base = _cid(item, "reference")
-    for step in _dose_steps(len(found)):
+    base = cid(item, "reference")
+    for step in dose_steps(len(found)):
         swaps = {index: changed[index] for index in order[:step]}
         control = Control(
-            id=_cid(item, "numbers", step),
+            id=cid(item, "numbers", step),
             item_id=item.id,
             family="numbers",
             level="3",
@@ -316,14 +304,18 @@ def build(
     generic = _generic_rubrics(items)
     controls: list[Control] = []
     for item in items:
-        donor = _pick_donor(item, items, _rng(seed, item.id, "donor"))
+        donor = _pick_donor(item, items, rng(seed, item.id, "donor"))
         made = [
             *_reference(item),
             *_degenerate(item),
             *_attacks(item, generic),
             *_transplants(item, donor),
-            *_splice(item, donor, seed),
-            *_numbers(item, seed),
+            # A JSON reference gets JSON edits; sentence and number edits are for prose.
+            *(
+                structured.build(item, donor, seed)
+                if structured.parse(item.reference) is not None
+                else [*_splice(item, donor, seed), *_numbers(item, seed)]
+            ),
         ]
         reference = item.reference
         for control in made:

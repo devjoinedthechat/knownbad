@@ -132,6 +132,14 @@ def _lift(outcomes: Sequence[Outcome], by_id: dict[str, Outcome]) -> list[dict[s
     return rows
 
 
+def _consistency(outcomes: Sequence[Outcome]) -> dict[str, Any]:
+    """With repeated trials: how often the grader gave one answer the same verdict."""
+    repeated = [o for o in outcomes if len(o.graded) >= 2]
+    result: dict[str, Any] = dict(rate(sum(1 for o in repeated if not o.flaky), len(repeated)))
+    result["split"] = [o.control.id for o in repeated if o.flaky]
+    return result
+
+
 def summarise(outcomes: Sequence[Outcome]) -> dict[str, Any]:
     by_id = {o.control.id: o for o in outcomes}
     graded = [o for o in outcomes if not o.errored]
@@ -170,6 +178,7 @@ def summarise(outcomes: Sequence[Outcome]) -> dict[str, Any]:
         "order": _order(outcomes, by_id),
         "lift": _lift(outcomes, by_id),
         "leaks": [o.control.id for o in must_fail if o.passed],
+        "consistency": _consistency(outcomes),
         "has_references": any(o.control.level == GOOD_LEVEL for o in outcomes),
     }
 

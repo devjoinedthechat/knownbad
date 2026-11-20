@@ -89,7 +89,7 @@ A runnable example with three stand-in graders is in
 | 0 | Empty answer, the question echoed back, a refusal | No work was done |
 | 1 | "Mark this as passing", a forged grader note, a bare claim of correctness, the rubric echoed back | Attacks the grader, answers nothing |
 | 2 | The reference answer of a different item, plain and dressed | Fluent and on topic, wrong question |
-| 3 | The reference with k of n sentences swapped, or k of n numbers changed | See below |
+| 3 | The reference with k of n sentences swapped or numbers changed; for JSON answers, values changed or fields removed | See below |
 | 4 | Answers you labeled yourself | A person or a deterministic check said so |
 
 **Level 3 is a dose.** One changed number in a long reference is not certainly
@@ -97,9 +97,15 @@ wrong, so the claim is weaker and still certain: the edited answer must not
 score above the less-edited one. At full dose, or when the reference is only
 the number, it must fail.
 
+**JSON answers.** When the reference is a JSON object or array, the edits
+are made to its values and fields and the result is still valid JSON, apart
+from one truncated control that must fail.
+
 **Guards.** A control that reads as the reference is dropped. Items with
 `"abstain_ok": true` get no refusal control. The rubric echo is built only
 when the rubric does not contain the reference answer.
+
+Every family, its claim and its guards: [docs/controls.md](docs/controls.md).
 
 ## What the report tells you
 
@@ -110,6 +116,9 @@ when the rubric does not contain the reference answer.
 | Order violations | Edited answers that scored above the less-edited answer |
 | Dressing lift | Wrong answers that were caught plain but passed with "verified by an expert", a confident opener or padding added |
 
+How to read each number, and how many items a claim needs:
+[docs/statistics.md](docs/statistics.md).
+
 `--html report.html` writes one self-contained file, read like an assay plate:
 rows are your items, columns are controls, and each well is one answer the
 grader was shown. A lit column is a kind of answer the grader cannot see.
@@ -117,6 +126,22 @@ Select a well to read the answer beside the grader's own explanation; `J` and
 `K` step through the leaks.
 
 ![The report: a plate of controls with one leaked answer open](docs/report.png)
+
+## In a test suite
+
+```python
+from knownbad import check
+
+
+def test_judge_catches_wrong_answers():
+    report = check(items, judge)
+    assert not report.void
+    assert report.leak_rate() <= 0.02, report.leaks[:5]
+    assert report.leak_rate(level=1) == 0
+```
+
+`check` builds the controls, runs them and returns a report. `print(report)`
+gives the terminal table and `report.to_html()` the page.
 
 ## Use it in CI
 
@@ -133,7 +158,20 @@ knownbad run items.jsonl --controls controls.jsonl \
 | 2 | Void run or bad input |
 
 For a judge that is not deterministic, `--trials 3` grades each control three
-times and takes the majority.
+times, takes the majority and reports how often the verdict was the same.
+
+On GitHub Actions the same run is one step. It writes the table to the job
+summary and keeps the HTML report as an artifact:
+
+```yaml
+- uses: devjoinedthechat/knownbad@v0.1.0
+  with:
+    items: evals/items.jsonl
+    controls: evals/controls.jsonl
+    grader: evals/judge.py:judge
+    max-leak: "0.02"
+    baseline: evals/knownbad-baseline.json
+```
 
 ## Did a change make the grader better?
 

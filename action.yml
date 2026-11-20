@@ -1,0 +1,90 @@
+name: knownbad
+description: Check an eval grader with answers that are wrong by construction, and fail the job when too many pass.
+branding:
+  icon: check-circle
+  color: purple
+inputs:
+  items:
+    description: Items as JSON Lines (id, input, reference, rubric).
+    required: true
+  grader:
+    description: A Python grader as FILE.py:FUNCTION. Give this or cmd.
+    required: false
+  cmd:
+    description: A shell command that reads JSON on stdin and prints a verdict. Give this or grader.
+    required: false
+  controls:
+    description: A frozen controls file from `knownbad gen`. Built from the items when empty.
+    required: false
+  baseline:
+    description: A result file from an earlier run. The job fails on regressions against it.
+    required: false
+  max-leak:
+    description: Fail when the share of wrong answers that pass is above this, for example 0.02.
+    required: false
+  trials:
+    description: Times each control is graded. Use 3 or more for a judge that varies.
+    required: false
+    default: "1"
+  report:
+    description: Where to write the HTML report.
+    required: false
+    default: knownbad-report.html
+  result:
+    description: Where to write the result file.
+    required: false
+    default: knownbad-result.json
+runs:
+  using: composite
+  steps:
+    - name: Install knownbad
+      shell: bash
+      run: python -m pip install --quiet "${{ github.action_path }}"
+    - name: Run the controls
+      id: run
+      shell: bash
+      env:
+        KB_ITEMS: ${{ inputs.items }}
+        KB_GRADER: ${{ inputs.grader }}
+        KB_CMD: ${{ inputs.cmd }}
+        KB_CONTROLS: ${{ inputs.controls }}
+        KB_BASELINE: ${{ inputs.baseline }}
+        KB_MAX_LEAK: ${{ inputs.max-leak }}
+        KB_TRIALS: ${{ inputs.trials }}
+        KB_REPORT: ${{ inputs.report }}
+        KB_RESULT: ${{ inputs.result }}
+      run: |
+        args=(run "$KB_ITEMS" --trials "$KB_TRIALS" --html "$KB_REPORT" -o "$KB_RESULT")
+        [ -n "$KB_GRADER" ] && args+=(--grader "$KB_GRADER")
+        [ -n "$KB_CMD" ] && args+=(--cmd "$KB_CMD")
+        [ -n "$KB_CONTROLS" ] && args+=(--controls "$KB_CONTROLS")
+        [ -n "$KB_MAX_LEAK" ] && args+=(--max-leak "$KB_MAX_LEAK")
+        status=0
+        knownbad "${args[@]}" > knownbad-output.txt 2> knownbad-errors.txt || status=$?
+        cat knownbad-output.txt; cat knownbad-errors.txt >&2
+        {
+          echo '### knownbad'
+          echo '```text'
+          cat knownbad-output.txt knownbad-errors.txt
+          echo '```'
+        } >> "$GITHUB_STEP_SUMMARY"
+        if [ -n "$KB_BASELINE" ] && [ -f "$KB_RESULT" ]; then
+          knownbad diff "$KB_BASELINE" "$KB_RESULT" --fail-on-regression > knownbad-diff.txt 2>&1 || status=1
+          cat knownbad-diff.txt
+          {
+            echo '### Against the baseline'
+            echo '```text'
+            cat knownbad-diff.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+        fi
+        exit "$status"
+    - name: Keep the report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: knownbad-report
+        path: |
+          ${{ inputs.report }}
+          ${{ inputs.result }}
+        if-no-files-found: ignore
