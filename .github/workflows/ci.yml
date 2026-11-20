@@ -27,6 +27,9 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
       - run: python -m pip install -e . pytest ruff
+      - name: Inspect AI, for the adapter tests
+        if: matrix.python != '3.10'
+        run: python -m pip install -e ".[inspect]"
       - run: ruff check .
       - run: ruff format --check .
       - run: pytest -q

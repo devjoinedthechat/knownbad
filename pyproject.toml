@@ -16,11 +16,14 @@ classifiers = [
   "Topic :: Software Development :: Testing",
 ]
 
+[project.optional-dependencies]
+inspect = ["inspect-ai>=0.3.100"]
+
 [project.scripts]
 knownbad = "knownbad.cli:main"
 
 [dependency-groups]
-dev = ["pytest>=8", "ruff>=0.6"]
+dev = ["pytest>=8", "ruff>=0.6", "inspect-ai>=0.3.100"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/knownbad"]

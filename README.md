@@ -135,6 +135,28 @@ knownbad run items.jsonl --controls controls.jsonl \
 For a judge that is not deterministic, `--trials 3` grades each control three
 times and takes the majority.
 
+## Inspect AI tasks
+
+If your eval is an [Inspect AI](https://inspect.aisi.org.uk) task, there is no
+grader function to write. knownbad takes the items from the task's dataset and
+runs the controls through the task's own scorer, inside a normal Inspect eval.
+
+```bash
+pip install "knownbad[inspect]"
+knownbad inspect my_evals.py:my_task --model anthropic/claude-haiku-5-5 --html report.html
+```
+
+| Option | Use |
+|---|---|
+| `--model` | The eval model, for scorers that grade with it |
+| `--grader-model` | The model for the task's `grader` role |
+| `--scorer` | Which score to read when the task has several |
+| `--log-dir` | Keep the Inspect log |
+
+The scorer runs unchanged: its template, its grader model, its parsing. Only
+the solver is replaced, with one that hands back each control as the answer.
+Free-text tasks only; multiple-choice tasks are refused.
+
 ## A grader in any language
 
 `--cmd` runs a shell command per control. It gets

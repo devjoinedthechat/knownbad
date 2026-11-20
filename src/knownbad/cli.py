@@ -90,12 +90,23 @@ def cmd_run(args: argparse.Namespace) -> int:
     if show:
         print("\r" + " " * 40 + "\r", end="", file=sys.stderr)
 
+    return _finish(args, outcomes, items, args.grader or args.cmd)
+
+
+def _finish(
+    args: argparse.Namespace,
+    outcomes: list[Outcome],
+    items: dict[str, Any],
+    grader: str,
+    usage: dict[str, Any] | None = None,
+) -> int:
+    """Summarise, write the files that were asked for, print, and gate."""
     summary = summarise(outcomes)
     result = {
         "schema": SCHEMA,
         "knownbad": __version__,
         "created": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "grader": args.grader or args.cmd,
+        "grader": grader,
         "trials": args.trials,
         "summary": summary,
         "items": {
@@ -104,6 +115,8 @@ def cmd_run(args: argparse.Namespace) -> int:
         },
         "outcomes": [o.to_dict() for o in outcomes],
     }
+    if usage:
+        result["usage"] = usage
     if args.out:
         write_json(args.out, result)
     if args.html:
@@ -112,6 +125,8 @@ def cmd_run(args: argparse.Namespace) -> int:
         write_text(args.html, render_html(result))
     if not args.quiet:
         print(render_text(result), end="")
+        for name, use in (usage or {}).items():
+            print(f"\nTokens · {name}: {use['input_tokens']:,} in, {use['output_tokens']:,} out")
         if args.html:
             print(f"\nReport: {args.html}")
 
@@ -121,6 +136,42 @@ def cmd_run(args: argparse.Namespace) -> int:
     if summary["void"]:
         return EXIT_VOID
     return EXIT_GATE if reasons else EXIT_OK
+
+
+def cmd_inspect(args: argparse.Namespace) -> int:
+    from .inspect_adapter import InspectError, items_from, run_task
+
+    try:
+        task = load_callable(args.task)()
+        item_list, samples = items_from(task)
+        items = {item.id: item for item in item_list}
+        if args.controls:
+            controls = read_controls(args.controls)
+        else:
+            controls = build(item_list, seed=args.seed, skip=_families(args.skip))
+        if args.harvested:
+            controls = [*controls, *read_harvested(args.harvested, items)]
+        unknown = sorted({c.item_id for c in controls} - set(items))
+        if unknown:
+            raise UsageError(f"controls refer to samples the task does not have: {unknown[:5]}")
+        outcomes, usage = run_task(
+            task,
+            controls,
+            samples,
+            model=args.model,
+            grader_model=args.grader_model,
+            scorer_name=args.scorer,
+            trials=args.trials,
+            pass_score=args.pass_score,
+            max_connections=args.workers,
+            log_dir=args.log_dir,
+        )
+    except InspectError as error:
+        raise UsageError(str(error)) from error
+    label = f"inspect {args.task}"
+    if args.grader_model or args.model != "mockllm/model":
+        label += f" · {args.grader_model or args.model}"
+    return _finish(args, outcomes, items, label, usage)
 
 
 def cmd_report(args: argparse.Namespace) -> int:
@@ -140,8 +191,29 @@ def cmd_report(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
-def _add_control_source(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("items", help="items as JSON Lines: id, input, reference, rubric")
+def _add_run_options(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--controls", metavar="FILE", help="a frozen controls file from 'gen'")
+    parser.add_argument("--trials", type=int, default=1, help="grade each control this many times")
+    parser.add_argument("--workers", type=int, default=4, help="controls graded at once")
+    parser.add_argument(
+        "--pass-score", type=float, default=0.5, help="a numeric score at or above this passes"
+    )
+    parser.add_argument("-o", "--out", metavar="FILE", help="write the full result as JSON")
+    parser.add_argument("--html", metavar="FILE", help="write a single-file HTML report")
+    parser.add_argument(
+        "--max-leak", type=float, metavar="RATE", help="exit 1 above this leak rate"
+    )
+    parser.add_argument(
+        "--max-leak-level",
+        action="append",
+        default=[],
+        metavar="LEVEL=RATE",
+        help="exit 1 when one level leaks more than this; repeatable",
+    )
+    parser.add_argument("-q", "--quiet", action="store_true")
+
+
+def _add_build_options(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--seed", type=int, default=0, help="seed for the control builders")
     parser.add_argument(
         "--skip",
@@ -151,6 +223,11 @@ def _add_control_source(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--harvested", metavar="FILE", help="answers you labeled yourself, as JSON Lines"
     )
+
+
+def _add_control_source(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("items", help="items as JSON Lines: id, input, reference, rubric")
+    _add_build_options(parser)
 
 
 def parser() -> argparse.ArgumentParser:
@@ -168,27 +245,31 @@ def parser() -> argparse.ArgumentParser:
 
     runp = commands.add_parser("run", help="put the controls through a grader")
     _add_control_source(runp)
-    runp.add_argument("--controls", metavar="FILE", help="a frozen controls file from 'gen'")
     runp.add_argument("--grader", metavar="MODULE:FUNC", help="a Python function (item, answer)")
     runp.add_argument("--cmd", metavar="COMMAND", help="a shell command: JSON in, verdict out")
-    runp.add_argument("--trials", type=int, default=1, help="grade each control this many times")
-    runp.add_argument("--workers", type=int, default=4)
     runp.add_argument("--timeout", type=float, default=120.0, help="seconds, for --cmd")
-    runp.add_argument(
-        "--pass-score", type=float, default=0.5, help="a numeric score at or above this passes"
-    )
-    runp.add_argument("-o", "--out", metavar="FILE", help="write the full result as JSON")
-    runp.add_argument("--html", metavar="FILE", help="write a single-file HTML report")
-    runp.add_argument("--max-leak", type=float, metavar="RATE", help="exit 1 above this leak rate")
-    runp.add_argument(
-        "--max-leak-level",
-        action="append",
-        default=[],
-        metavar="LEVEL=RATE",
-        help="exit 1 when one level leaks more than this; repeatable",
-    )
-    runp.add_argument("-q", "--quiet", action="store_true")
+    _add_run_options(runp)
     runp.set_defaults(run=cmd_run)
+
+    insp = commands.add_parser(
+        "inspect", help="put the controls through the scorer of an Inspect AI task"
+    )
+    insp.add_argument(
+        "task", metavar="FILE.py:TASK", help="a function that returns an Inspect Task"
+    )
+    insp.add_argument(
+        "--model",
+        default="mockllm/model",
+        help="model for scorers that grade with the eval's model",
+    )
+    insp.add_argument("--grader-model", metavar="MODEL", help="model for the task's grader role")
+    insp.add_argument(
+        "--scorer", metavar="NAME", help="which score to read when the task has several"
+    )
+    insp.add_argument("--log-dir", metavar="DIR", help="keep the Inspect log here")
+    _add_build_options(insp)
+    _add_run_options(insp)
+    insp.set_defaults(run=cmd_inspect)
 
     report = commands.add_parser("report", help="show a saved result again")
     report.add_argument("result")
