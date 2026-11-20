@@ -1,59 +1,46 @@
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.svg">
-    <img src="assets/logo-light.svg" alt="" width="112" height="112">
-  </picture>
-</p>
+# knownbad
 
-<h1 align="center">knownbad</h1>
-
-<p align="center">
-  <b>Negative controls for evals.</b><br>
-  How many wrong answers does your grader accept?
-</p>
-
-<p align="center">
-  <a href="https://github.com/devjoinedthechat/knownbad/actions/workflows/ci.yml"><img src="https://github.com/devjoinedthechat/knownbad/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-e8367f" alt="MIT licence"></a>
-  <img src="https://img.shields.io/badge/python-%E2%89%A5%203.10-e8367f" alt="Python >= 3.10">
-  <img src="https://img.shields.io/badge/runtime%20dependencies-none-e8367f" alt="No runtime dependencies">
-</p>
-
-<p align="center">
-  <a href="#why">Why</a> ·
-  <a href="#quick-start">Quick start</a> ·
-  <a href="#the-controls">The controls</a> ·
-  <a href="#in-a-test-suite">In a test suite</a> ·
-  <a href="#use-it-in-ci">CI</a> ·
-  <a href="#inspect-ai-tasks">Inspect AI</a> ·
-  <a href="#limits">Limits</a>
-</p>
+**Negative controls for evals. Find out what your grader actually checks.**
 
 An eval grader is a measuring instrument: an LLM judge, a rubric, a test
-function. knownbad checks it the way a lab checks an assay. It feeds the
-grader answers that are wrong by construction and reports how many pass.
+function. knownbad checks it the way a lab checks an assay, with samples whose
+result is known before the instrument sees them. It feeds the grader answers
+that are wrong or damaged by construction and reports which ones still pass.
 
 ```text
-$ knownbad run items.jsonl --grader graders.py:judge
+$ knownbad report runbooks__langchain-qa__claude-haiku-5-5.json
 
-Reference answers passed   24 / 24   100%
+Reference answers passed   20 / 20   100%
 
 Wrong answers that passed
-  level                control                      leaked   rate   95% interval
-  0 no answer          empty                        0 / 24     0%   0–14%
-  1 grader attack      injection-forged            24 / 24   100%   86–100%
-  2 wrong question     transplant                   0 / 24     0%   0–14%
-  2 wrong question     transplant+authority        24 / 24   100%   86–100%
   ...
-  all                                             50 / 288    17%   13–22%
+  all                                              0 / 220     0%   0–2%
 
-Detection threshold
-  splice    fails at least half with 50%–75% of sentences replaced
-  numbers   never fails half: 100% still pass with 100% of numbers changed
+What it notices: share of answers that still pass after the smallest edit
+  missing content     one sentence removed                         9 / 20   45%   23–68%
+  off-topic content   one sentence swapped for another item's      9 / 20   45%   23–68%
+  a wrong number      one number changed slightly                  0 / 15    0%   0–22%
+  a reversed claim    one word turned into its opposite            0 / 15    0%   0–22%
+  self-contradiction  a sentence repeated with a changed fact      0 / 20    0%   0–17%
 ```
 
-That grader passes its own references, so it looks fine. It also passes any
-answer that claims to be verified, and it cannot see a changed number.
+That is LangChain's QA grading prompt on Claude Haiku 5.5, from the study in
+this repo. It passes every reference and fails every wrong answer, so it
+looks sound. It also passes almost half of the answers that leave out a
+third of the content, because its prompt only asks about contradictions.
+
+## What we measured
+
+Ten judge setups, 74 items, 10,709 graded controls:
+
+- **No judge passed a plainly wrong answer**: 0 of 6,283.
+- **Half of them did not check for missing content**: five of ten passed 40
+  to 53% of answers with one sentence removed.
+- **Wording decides it**: one added sentence in a five-line judge took that
+  from 40% to 0%.
+
+The full tables, and the two faults the study found in knownbad itself:
+[docs/findings.md](docs/findings.md).
 
 ## Why
 
@@ -106,7 +93,8 @@ knownbad run items.jsonl --grader graders.py:judge --html report.html
 ```
 
 A runnable example with three stand-in graders is in
-[examples/support](examples/support).
+[examples/support](examples/support). Its `loose` grader, built on word
+overlap, passes 17% of plainly wrong answers and cannot see a changed number.
 
 ## The controls
 

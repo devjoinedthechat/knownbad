@@ -1,0 +1,342 @@
+{
+ "langchain-qa \u00b7 Haiku 5.5": {
+  "ref": [
+   74,
+   74
+  ],
+  "fail": [
+   0,
+   784
+  ],
+  "dressed": [
+   0,
+   222
+  ],
+  "number": [
+   1,
+   65
+  ],
+  "flip": [
+   0,
+   45
+  ],
+  "contra": [
+   1,
+   73
+  ],
+  "swapped": [
+   23,
+   43
+  ],
+  "removed": [
+   23,
+   43
+  ]
+ },
+ "langchain-cot-qa \u00b7 Haiku 5.5": {
+  "ref": [
+   74,
+   74
+  ],
+  "fail": [
+   0,
+   784
+  ],
+  "dressed": [
+   0,
+   222
+  ],
+  "number": [
+   1,
+   65
+  ],
+  "flip": [
+   1,
+   45
+  ],
+  "contra": [
+   1,
+   73
+  ],
+  "swapped": [
+   23,
+   43
+  ],
+  "removed": [
+   22,
+   43
+  ]
+ },
+ "promptfoo-rubric \u00b7 Haiku 5.5": {
+  "ref": [
+   74,
+   74
+  ],
+  "fail": [
+   0,
+   784
+  ],
+  "dressed": [
+   0,
+   222
+  ],
+  "number": [
+   2,
+   65
+  ],
+  "flip": [
+   2,
+   45
+  ],
+  "contra": [
+   6,
+   73
+  ],
+  "swapped": [
+   20,
+   43
+  ],
+  "removed": [
+   22,
+   43
+  ]
+ },
+ "naive \u00b7 Haiku 5.5": {
+  "ref": [
+   74,
+   74
+  ],
+  "fail": [
+   0,
+   784
+  ],
+  "dressed": [
+   0,
+   222
+  ],
+  "number": [
+   1,
+   65
+  ],
+  "flip": [
+   0,
+   45
+  ],
+  "contra": [
+   0,
+   73
+  ],
+  "swapped": [
+   8,
+   43
+  ],
+  "removed": [
+   17,
+   43
+  ]
+ },
+ "naive \u00b7 Sonnet 5.5": {
+  "ref": [
+   25,
+   25
+  ],
+  "fail": [
+   0,
+   265
+  ],
+  "dressed": [
+   0,
+   75
+  ],
+  "number": [
+   1,
+   23
+  ],
+  "flip": [
+   0,
+   15
+  ],
+  "contra": [
+   0,
+   25
+  ],
+  "swapped": [
+   1,
+   15
+  ],
+  "removed": [
+   7,
+   15
+  ]
+ },
+ "inspect-fact \u00b7 Haiku 5.5": {
+  "ref": [
+   74,
+   74
+  ],
+  "fail": [
+   0,
+   784
+  ],
+  "dressed": [
+   0,
+   222
+  ],
+  "number": [
+   2,
+   65
+  ],
+  "flip": [
+   0,
+   45
+  ],
+  "contra": [
+   0,
+   73
+  ],
+  "swapped": [
+   1,
+   43
+  ],
+  "removed": [
+   4,
+   43
+  ]
+ },
+ "inspect-qa \u00b7 Haiku 5.5": {
+  "ref": [
+   74,
+   74
+  ],
+  "fail": [
+   0,
+   784
+  ],
+  "dressed": [
+   0,
+   222
+  ],
+  "number": [
+   2,
+   65
+  ],
+  "flip": [
+   1,
+   45
+  ],
+  "contra": [
+   10,
+   73
+  ],
+  "swapped": [
+   1,
+   43
+  ],
+  "removed": [
+   2,
+   43
+  ]
+ },
+ "inspect-fact \u00b7 Sonnet 5.5": {
+  "ref": [
+   25,
+   25
+  ],
+  "fail": [
+   0,
+   265
+  ],
+  "dressed": [
+   0,
+   75
+  ],
+  "number": [
+   1,
+   23
+  ],
+  "flip": [
+   0,
+   15
+  ],
+  "contra": [
+   1,
+   25
+  ],
+  "swapped": [
+   0,
+   15
+  ],
+  "removed": [
+   0,
+   15
+  ]
+ },
+ "inspect-qa \u00b7 Sonnet 5.5": {
+  "ref": [
+   25,
+   25
+  ],
+  "fail": [
+   0,
+   265
+  ],
+  "dressed": [
+   0,
+   75
+  ],
+  "number": [
+   1,
+   23
+  ],
+  "flip": [
+   0,
+   15
+  ],
+  "contra": [
+   0,
+   25
+  ],
+  "swapped": [
+   0,
+   15
+  ],
+  "removed": [
+   0,
+   15
+  ]
+ },
+ "strict \u00b7 Haiku 5.5": {
+  "ref": [
+   74,
+   74
+  ],
+  "fail": [
+   0,
+   784
+  ],
+  "dressed": [
+   0,
+   222
+  ],
+  "number": [
+   0,
+   65
+  ],
+  "flip": [
+   0,
+   45
+  ],
+  "contra": [
+   0,
+   73
+  ],
+  "swapped": [
+   0,
+   43
+  ],
+  "removed": [
+   0,
+   43
+  ]
+ }
+}

@@ -271,7 +271,7 @@ def _add_control_source(parser: argparse.ArgumentParser) -> None:
 def parser() -> argparse.ArgumentParser:
     top = argparse.ArgumentParser(
         prog="knownbad",
-        description="Negative controls for evals: how many wrong answers does your grader accept?",
+        description="Negative controls for evals: find out what your grader actually checks.",
     )
     top.add_argument("--version", action="version", version=f"knownbad {__version__}")
     commands = top.add_subparsers(dest="command", required=True)

@@ -36,6 +36,13 @@ three graders** are over either bar:
 Fewer than three means the claim is dropped. knownbad then stays a check
 for home-made graders, which is where the example run shows it bites.
 
+## Result
+
+The claim failed: no grader reached either bar. The tables and what was found
+instead are in [docs/findings.md](../../docs/findings.md). The counts behind
+them are in [tallies.json](tallies.json); the raw result files are about 10 MB
+and are not kept in the repository.
+
 ## Run it
 
 ```bash

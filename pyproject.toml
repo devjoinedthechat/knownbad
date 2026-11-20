@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "knownbad"
 version = "0.1.0"
-description = "Negative controls for evals: how many wrong answers does your grader accept?"
+description = "Negative controls for evals: find out what your grader actually checks."
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
