@@ -45,18 +45,22 @@ FIXED_GROUPS: tuple[tuple[str, tuple[tuple[str, str], ...]], ...] = (
             ("transplant+padding", "+ padding"),
         ),
     ),
-    ("3 broken", (("json-truncated", "truncated"),)),
+    ("3 edits", (("contradict", "contradiction"), ("json-truncated", "truncated"))),
 )
 SLOT_GROUPS = (
-    ("splice", "3 sentences →", "sentences swapped"),
+    ("drop", "3 removed →", "sentences removed"),
+    ("splice", "3 swapped →", "sentences swapped"),
     ("numbers", "3 numbers →", "numbers changed"),
+    ("flip", "3 reversed →", "words reversed"),
     ("json-value", "3 values →", "values changed"),
     ("json-drop", "3 fields →", "fields removed"),
     ("harvested", "4 yours", "your known-bad"),
     ("harvested-good", "4 yours, good", "your known-good"),
 )
 DOSE_NAMES = {
-    "splice": ("Sentences", "Sentences swapped"),
+    "drop": ("Removal", "Sentences removed"),
+    "flip": ("Reversal", "Words reversed"),
+    "splice": ("Swap", "Sentences swapped"),
     "numbers": ("Numbers", "Numbers changed"),
     "json-value": ("Values", "Values changed"),
     "json-drop": ("Fields", "Fields removed"),
@@ -67,6 +71,8 @@ DOSE_STYLES = (
     ('stroke-dasharray="5 4"', "var(--page)"),
     ('stroke-dasharray="1 4" stroke-linecap="round"', "var(--ink)"),
     ('stroke-dasharray="9 3 2 3"', "var(--page)"),
+    ('stroke-dasharray="2 2"', "var(--ink)"),
+    ('stroke-dasharray="12 4"', "var(--page)"),
 )
 STATE_WORDS = {
     "ok": "as expected",
@@ -246,10 +252,10 @@ function answerNode(c){const dd=el('dd','answer');
 if(!c.a){dd.append(el('span','empty','(empty answer)'));return dd}
 const item=D.items[c.i]||{};let base=null;
 if(c.b&&D.c[c.b]&&c.f.startsWith('transplant+'))base=D.c[c.b].a;
-else if((c.f==='splice'||c.f==='numbers')&&item.r)base=item.r;
+else if(D.edited.includes(c.f)&&item.r)base=item.r;
 if(base==null){dd.textContent=c.a;return dd}
 let run='',on=false;const flush=()=>{if(!run)return;dd.append(on?el('mark',null,run):run);run=''};
-for(const [t,ch] of diff(base,c.a,c.f==='splice')){if(ch!==on){flush();on=ch}run+=t}flush();return dd}
+for(const [t,ch] of diff(base,c.a,c.f==='splice'||c.f==='contradict')){if(ch!==on){flush();on=ch}run+=t}flush();return dd}
 function show(b,focus){if(cur){cur.removeAttribute('aria-current');cur.tabIndex=-1}
 cur=b;b.setAttribute('aria-current','true');b.tabIndex=0;if(focus)b.focus({preventScroll:false});
 const c=D.c[b.dataset.id],item=D.items[c.i]||{},box=$('#insp'),bad=/leak|viol|reject/.test(c.s);
@@ -506,18 +512,6 @@ def _readings(summary: dict[str, Any]) -> str:
         items.append(
             ("References passed", f"{refs['k']}/{refs['n']}", "right answers the grader accepted")
         )
-    for family, curve in summary["dose"].items():
-        threshold = curve["threshold"]
-        if threshold is None:
-            value, small = "never", "caught at no dose"
-        else:
-            value = (
-                f"≤{pct(threshold[1])}"
-                if threshold[0] == 0
-                else f"{threshold[0] * 100:.0f}–{pct(threshold[1])}"
-            )
-            small = "changed before it fails half"
-        items.append((f"{DOSE_NAMES.get(family, (family,))[0]} threshold", value, small))
     if order["n"]:
         items.append(("Order violations", str(order["k"]), f"of {order['n']} edited answers"))
     same = summary.get("consistency") or {}
@@ -625,6 +619,33 @@ def _dose(summary: dict[str, Any]) -> str:
     )
 
 
+def _profile(summary: dict[str, Any]) -> str:
+    rows = summary.get("profile") or []
+    if not rows:
+        return ""
+    body = []
+    for row in rows:
+        share = (row["rate"] or 0) * 100
+        low, high = (row["low"] or 0) * 100, (row["high"] or 0) * 100
+        tip = f"{row['edit']}: {row['k']} of {row['n']} still pass, 95% interval {span(row)}"
+        body.append(
+            f'<tr class="{"" if row["k"] else "zero"}" data-t="{_e(tip)}">'
+            f'<td>{_e(row["notices"].capitalize())}</td><td class="l">{_e(row["edit"])}</td>'
+            f'<td class="n">{row["k"]} / {row["n"]}</td><td class="n">{pct(row["rate"])}</td>'
+            f'<td><div class="bar"><i style="width:{share:.1f}%"></i>'
+            f'<u style="left:{low:.1f}%;width:{max(high - low, 0.6):.1f}%"></u></div></td></tr>'
+        )
+    return (
+        "<h2>What it notices</h2>"
+        '<p class="lede">Each row makes the smallest edit of one kind to a right answer and '
+        "counts how often the answer still passes. A long bar is something this grader "
+        "does not check.</p>"
+        '<div class="scroll"><table class="t"><thead><tr><th>Does it notice</th><th>Edit</th>'
+        '<th class="n">Still pass</th><th class="n">Share</th><th>0 to 100%</th></tr></thead>'
+        f"<tbody>{''.join(body)}</tbody></table></div>"
+    )
+
+
 def _dressing(summary: dict[str, Any]) -> str:
     if not summary["lift"]:
         return ""
@@ -685,7 +706,8 @@ def render(result: dict[str, Any]) -> str:
         for item_id, item in result.get("items", {}).items()
         if any(c["i"] == item_id for c in controls.values())
     }
-    data = {"c": controls, "items": items, "words": STATE_WORDS}
+    edited = ["splice", "numbers", "flip", "contradict", "json-value", "json-drop"]
+    data = {"c": controls, "items": items, "words": STATE_WORDS, "edited": edited}
     errors = ""
     if summary["errors"]:
         first = summary["error_examples"][0]
@@ -712,7 +734,7 @@ def render(result: dict[str, Any]) -> str:
         '<aside class="insp" id="insp" aria-live="polite"><noscript>Turn on JavaScript to '
         "read single answers. Every number on this page is already here without it."
         "</noscript></aside></div>"
-        f"{_dose(summary)}{_dressing(summary)}{_families(summary)}"
+        f"{_profile(summary)}{_dose(summary)}{_dressing(summary)}{_families(summary)}"
         f'</main><div id="tip"></div><script type="application/json" id="data">{_json(data)}'
         f"</script><script>{JS}</script></body></html>\n"
     )

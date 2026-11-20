@@ -10,6 +10,7 @@ from typing import Any
 
 from . import __version__
 from .analyze import gate, summarise
+from .cache import Cache, fingerprint
 from .compare import compare, regressions
 from .controls import FAMILIES, build
 from .grader import command_grader, load_callable, python_grader
@@ -87,10 +88,18 @@ def cmd_run(args: argparse.Namespace) -> int:
         if show:
             print(f"\r  grading {done}/{total}", end="", file=sys.stderr, flush=True)
 
-    outcomes = run(controls, items, grader, args.trials, args.workers, progress)
+    cache = None
+    if args.cache:
+        cache = Cache(args.cache, fingerprint(args.grader, args.cmd, args.pass_score))
+    outcomes = run(
+        controls, items, grader, args.trials, args.workers, progress, cache, args.retries
+    )
     if show:
         print("\r" + " " * 40 + "\r", end="", file=sys.stderr)
 
+    if cache and not args.quiet:
+        calls = len(controls) * args.trials
+        print(f"{cache.hits} of {calls} verdicts came from {args.cache}\n")
     return _finish(args, outcomes, items, args.grader or args.cmd)
 
 
@@ -277,6 +286,15 @@ def parser() -> argparse.ArgumentParser:
     runp.add_argument("--grader", metavar="MODULE:FUNC", help="a Python function (item, answer)")
     runp.add_argument("--cmd", metavar="COMMAND", help="a shell command: JSON in, verdict out")
     runp.add_argument("--timeout", type=float, default=120.0, help="seconds, for --cmd")
+    runp.add_argument(
+        "--cache", metavar="FILE", help="keep verdicts here, so a stopped run does not pay twice"
+    )
+    runp.add_argument(
+        "--retries",
+        type=int,
+        default=0,
+        help="ask again up to this many times when the grader returns no verdict",
+    )
     _add_run_options(runp)
     runp.set_defaults(run=cmd_run)
 

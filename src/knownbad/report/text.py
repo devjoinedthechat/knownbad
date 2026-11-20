@@ -12,6 +12,8 @@ LEVEL_NAMES = {
     "4": "harvested",
 }
 DOSE_UNITS = {
+    "drop": "sentences removed",
+    "flip": "words reversed",
     "splice": "sentences replaced",
     "numbers": "numbers changed",
     "json-value": "values changed",
@@ -90,6 +92,14 @@ def render(result: dict[str, Any], limit: int = 8) -> str:
         total = summary["overall"]
         count = f"{total['k']} / {total['n']}"
         out(f"  {'all':<21}{'':<24}{count:>11}{pct(total['rate']):>7}   {span(total)}")
+        out("")
+
+    if summary.get("profile"):
+        out("What it notices: share of answers that still pass after the smallest edit")
+        for row in summary["profile"]:
+            count = f"{row['k']} / {row['n']}"
+            share = f"{count:>9}{pct(row['rate']):>6}   {span(row)}"
+            out(f"  {row['notices']:<20}{row['edit']:<42}{share}")
         out("")
 
     if summary["dose"]:

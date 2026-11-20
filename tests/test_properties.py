@@ -55,7 +55,9 @@ def test_builders_hold_their_invariants(items, seed):
         if control.base is not None:
             assert by_id[control.base].item_id == control.item_id
         if control.expect == NOT_HIGHER:
-            assert control.base in by_id and control.dose is not None and 0 < control.dose <= 1
+            assert control.base in by_id
+            if control.family != "contradict":  # one edit, not a dose chain
+                assert control.dose is not None and 0 < control.dose <= 1
         if control.expect == PASS:
             assert control.answer == own.reference
         if control.expect == FAIL and own.reference is not None:

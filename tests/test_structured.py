@@ -95,5 +95,6 @@ def test_a_field_by_field_grader_is_measured_end_to_end():
     from knownbad.cli import make_result
 
     page = render(make_result(outcomes, {i.id: i for i in items}, "most_fields"))
-    assert "Values threshold" in page and "Fields threshold" in page
+    assert "<b>Values changed</b>" in page and "<b>Fields removed</b>" in page
+    assert ">A wrong value<" in page and ">A missing field<" in page
     assert "3 values →" in page and ">truncated<" in page

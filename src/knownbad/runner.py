@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import time
 from collections.abc import Callable, Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from typing import Any
 
+from .cache import Cache
 from .grader import Grader
 from .model import Control, Item, Verdict
 
@@ -67,20 +69,43 @@ def run(
     trials: int = 1,
     workers: int = 4,
     on_progress: Callable[[int, int], None] | None = None,
+    cache: Cache | None = None,
+    retries: int = 0,
+    retry_wait: float = 1.0,
 ) -> list[Outcome]:
-    """Grade every control `trials` times. Order of the result matches `controls`."""
+    """Grade every control `trials` times. Order of the result matches `controls`.
+
+    A call that returns no verdict is made again up to `retries` times, with a
+    wait that doubles. With a cache, a verdict already on disk is not asked for.
+    """
     if trials < 1:
         raise ValueError("trials must be at least 1")
     missing = sorted({c.item_id for c in controls} - set(items))
     if missing:
         raise ValueError(f"controls refer to items that are not loaded: {', '.join(missing[:5])}")
 
-    jobs = [(index, control) for index, control in enumerate(controls) for _ in range(trials)]
+    jobs = [
+        (index, control, trial) for index, control in enumerate(controls) for trial in range(trials)
+    ]
     verdicts: list[list[Verdict]] = [[] for _ in controls]
 
-    def grade(job: tuple[int, Control]) -> tuple[int, Verdict]:
-        index, control = job
-        return index, grader(items[control.item_id], control.answer)
+    def grade(job: tuple[int, Control, int]) -> tuple[int, Verdict]:
+        index, control, trial = job
+        item = items[control.item_id]
+        key = cache.key(item, control, trial) if cache else None
+        if cache and key:
+            known = cache.get(key)
+            if known is not None:
+                return index, known
+        verdict = grader(item, control.answer)
+        for attempt in range(retries):
+            if verdict.passed is not None:
+                break
+            time.sleep(retry_wait * 2**attempt)
+            verdict = grader(item, control.answer)
+        if cache and key:
+            cache.put(key, verdict)
+        return index, verdict
 
     done = 0
     with ThreadPoolExecutor(max_workers=max(1, workers)) as pool:

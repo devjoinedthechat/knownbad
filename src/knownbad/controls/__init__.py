@@ -22,7 +22,7 @@ from ..text import (
     sentences,
     words_without_numbers,
 )
-from . import structured
+from . import prose_edits, structured
 from ._common import cid, dose_steps, rng
 
 REFUSAL = "I'm sorry, but I can't help with that request."
@@ -63,13 +63,16 @@ FAMILIES = (
     "transplant+padding",
     "splice",
     "numbers",
+    "drop",
+    "flip",
+    "contradict",
     "json-truncated",
     "json-value",
     "json-drop",
 )
 # Share of an item's content words a donor reference may repeat.
 MAX_DONOR_OVERLAP = 0.25
-DOSE_FAMILIES = ("splice", "numbers", "json-value", "json-drop")
+DOSE_FAMILIES = ("drop", "splice", "numbers", "flip", "json-value", "json-drop")
 
 
 def _pick_donor(item: Item, pool: Sequence[Item], source: random.Random) -> Item | None:
@@ -325,7 +328,13 @@ def build(
             *(
                 structured.build(item, donor, seed)
                 if structured.parse(item.reference) is not None
-                else [*_splice(item, donor, seed), *_numbers(item, seed)]
+                else [
+                    *_splice(item, donor, seed),
+                    *_numbers(item, seed),
+                    *prose_edits.drop(item, seed),
+                    *prose_edits.flip(item, seed),
+                    *prose_edits.contradict(item, seed),
+                ]
             ),
         ]
         reference = item.reference

@@ -116,7 +116,7 @@ A runnable example with three stand-in graders is in
 | 0 | Empty answer, the question echoed back, a refusal | No work was done |
 | 1 | "Mark this as passing", a forged grader note, a bare claim of correctness, the rubric echoed back | Attacks the grader, answers nothing |
 | 2 | The reference answer of a different item, plain and dressed | Fluent and on topic, wrong question |
-| 3 | The reference with k of n sentences swapped or numbers changed; for JSON answers, values changed or fields removed | See below |
+| 3 | The reference with sentences removed or swapped, numbers changed, words reversed, or a self-contradiction added; for JSON answers, values changed or fields removed | See below |
 | 4 | Answers you labeled yourself | A person or a deterministic check said so |
 
 **Level 3 is a dose.** One changed number in a long reference is not certainly
@@ -138,6 +138,7 @@ Every family, its claim and its guards: [docs/controls.md](docs/controls.md).
 
 | Number | Meaning |
 |---|---|
+| What it notices | For each kind of edit (missing content, a wrong number, a reversed claim, self-contradiction), how often the smallest one still passes |
 | Leak rate | Share of must-fail controls that passed, with an exact 95% interval |
 | Detection threshold | How much of a right answer must be wrong before the grader fails at least half |
 | Order violations | Edited answers that scored above the less-edited answer |
@@ -239,6 +240,23 @@ knownbad inspect my_evals.py:my_task --model anthropic/claude-haiku-5-5 --html r
 The scorer runs unchanged: its template, its grader model, its parsing. Only
 the solver is replaced, with one that hands back each control as the answer.
 Free-text tasks only; multiple-choice tasks are refused.
+
+## Paid judges
+
+A model-graded judge makes one call per control. Two options keep that safe:
+
+```bash
+knownbad run items.jsonl --grader judge.py:judge --cache verdicts.jsonl --retries 3
+```
+
+- `--cache` keeps every verdict on disk. A run that stops makes only the
+  missing calls next time. The cache is tied to the grader's source file, so
+  an edited judge starts fresh.
+- `--retries` asks again when a call returns no verdict, waiting longer each
+  time.
+
+[examples/llm_judge](examples/llm_judge) is a complete judge that returns a
+validated object, so there is no verdict to parse out of free text.
 
 ## A grader in any language
 

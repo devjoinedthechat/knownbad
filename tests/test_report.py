@@ -48,8 +48,9 @@ def test_the_plate_has_one_well_per_control_in_the_right_state(tmp_path, items_p
 def test_headline_readings_and_figures(tmp_path, items_path, graders_path):
     page = render(result_for(tmp_path, items_path, graders_path, "loose"))
     assert "<em>50 of 288</em> wrong answers passed." in page
-    assert "Numbers threshold</dt><dd>never" in page
-    assert "Sentences threshold</dt><dd>50–75%" in page
+    assert "<b>Numbers changed</b>Never fails half" in page
+    assert "<b>Sentences swapped</b>Fails at least half with 50–75%" in page
+    assert "What it notices" in page and ">Self-contradiction<" in page
     assert "Detection threshold" in page and "Dressing" in page and "By control" in page
     assert embedded(page)["c"]["refund-window::transplant+authority"]["x"] == (
         "The answer states it was verified."

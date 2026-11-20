@@ -71,7 +71,7 @@ def test_order_violation_is_found_when_an_edit_scores_higher():
 
     summary = summary_for(pool, longer_is_worse)
     assert summary["order"]["k"] > 0
-    assert all("::splice@" in v for v in summary["order"]["violations"])
+    assert any("::splice@" in v for v in summary["order"]["violations"])
 
 
 def test_dressing_lift_counts_answers_turned_into_passes(items):

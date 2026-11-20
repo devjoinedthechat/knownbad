@@ -132,6 +132,39 @@ def _lift(outcomes: Sequence[Outcome], by_id: dict[str, Outcome]) -> list[dict[s
     return rows
 
 
+# What each kind of edit asks of the grader, in the order a reader thinks of them.
+PROFILE = (
+    ("drop", "missing content", "one sentence removed"),
+    ("splice", "off-topic content", "one sentence swapped for another item's"),
+    ("numbers", "a wrong number", "one number changed slightly"),
+    ("flip", "a reversed claim", "one word turned into its opposite"),
+    ("contradict", "self-contradiction", "a sentence repeated with a changed fact"),
+    ("json-value", "a wrong value", "one JSON value changed"),
+    ("json-drop", "a missing field", "one JSON field removed"),
+)
+
+
+def _profile(outcomes: Sequence[Outcome]) -> list[dict[str, Any]]:
+    """For each kind of edit: how often the smallest edit still passes.
+
+    The smallest edit is the hardest to see, so this is the row that tells a
+    grader that reads closely from one that reads for the gist.
+    """
+    rows = []
+    for family, notices, edit in PROFILE:
+        smallest = [
+            o
+            for o in outcomes
+            if o.control.family == family and not o.errored and (o.control.edits or 1) == 1
+        ]
+        if not smallest:
+            continue
+        row: dict[str, Any] = {"family": family, "notices": notices, "edit": edit}
+        row.update(rate(sum(1 for o in smallest if o.passed), len(smallest)))
+        rows.append(row)
+    return rows
+
+
 def _consistency(outcomes: Sequence[Outcome]) -> dict[str, Any]:
     """With repeated trials: how often the grader gave one answer the same verdict."""
     repeated = [o for o in outcomes if len(o.graded) >= 2]
@@ -178,6 +211,7 @@ def summarise(outcomes: Sequence[Outcome]) -> dict[str, Any]:
         "order": _order(outcomes, by_id),
         "lift": _lift(outcomes, by_id),
         "leaks": [o.control.id for o in must_fail if o.passed],
+        "profile": _profile(outcomes),
         "consistency": _consistency(outcomes),
         "has_references": any(o.control.level == GOOD_LEVEL for o in outcomes),
     }

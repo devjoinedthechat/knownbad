@@ -50,8 +50,10 @@ most half of the reference's content words.
 | `transplant+confidence` | The same, opening with "I am completely certain about this." |
 | `transplant+padding` | The same, closing with a friendly offer of more detail |
 
-The donor is an item whose reference is neither equal to nor contained in
-this item's reference. With no such item, the family is skipped.
+The donor is another item whose reference shares no number with this item's
+reference and repeats at most a quarter of its content words. A donor that
+repeats the item's facts can be a right answer to it, so it is never used.
+With no such item, the family is skipped.
 
 The dressed versions measure bias. They are paired with the plain transplant
 of the same item, so a difference in leak rate is caused by the added line.
@@ -64,8 +66,11 @@ superset of the step before.
 
 | Family | Edit | `fail` when |
 |---|---|---|
+| `drop` | k of n sentences removed, nothing added | Never |
 | `splice` | k of n sentences replaced with another item's sentences | Every sentence is replaced |
 | `numbers` | k of n numbers changed by a small amount | The reference is only that number |
+| `flip` | k of n words turned into their opposite or another unit | Never |
+| `contradict` | The reference, then one of its sentences again with a fact changed | Never |
 | `json-value` | k of n values changed to another value of the same type | The reference has one value |
 | `json-drop` | k of n top-level fields removed | Every field is removed |
 | `json-truncated` | The reference cut off at 60% | Always: it no longer parses |
@@ -73,6 +78,21 @@ superset of the step before.
 All other steps are `not_higher` against the step before. One changed number
 in a long answer may not matter to a rubric, so knownbad does not call it
 wrong. It only claims the edited answer is not better.
+
+Each prose family asks one question of the grader:
+
+| Family | Does the grader notice |
+|---|---|
+| `drop` | Missing content |
+| `splice` | Off-topic content in place of the answer |
+| `numbers` | A wrong number |
+| `flip` | A reversed claim: "can" for "cannot", "weeks" for "days" |
+| `contradict` | An answer that disagrees with itself |
+
+The report's "What it notices" table shows, for each, how often the smallest
+edit still passes. Word flips use a fixed English list of opposites and
+units; a reference in another language gets none. Negations are only
+removed, never added.
 
 Number edits are small on purpose: 14 becomes 16, not 9,000. A near miss is
 the error a grader has to be able to see.

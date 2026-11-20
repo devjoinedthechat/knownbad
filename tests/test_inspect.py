@@ -104,6 +104,6 @@ def test_cli_runs_the_example_task_offline(tmp_path, capsys):
     assert code == 0
     saved = json.loads(out.read_text())
     assert saved["grader"] == "inspect examples/support/inspect_task.py:support"
-    assert saved["summary"]["controls"] == 368 and saved["summary"]["overall"]["k"] == 0
+    assert saved["summary"]["controls"] == 475 and saved["summary"]["overall"]["k"] == 0
     assert "No wrong answer passed." in page.read_text()
     assert "Reference answers passed   24 / 24" in capsys.readouterr().out
