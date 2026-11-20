@@ -314,6 +314,11 @@ reference. Those measure false rejects.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). The rules for adding a control are there.
 
+## Related
+
+- [tieout](https://github.com/devjoinedthechat/tieout) is an eval for accounting agents that audits its one model grader before trusting it.
+- [afstem](https://github.com/devjoinedthechat/afstem) is an eval for bank reconciliation agents scored on final state, with no model grader at all.
+
 ## License
 
 MIT
