@@ -110,8 +110,13 @@ when the rubric does not contain the reference answer.
 | Order violations | Edited answers that scored above the less-edited answer |
 | Dressing lift | Wrong answers that were caught plain but passed with "verified by an expert", a confident opener or padding added |
 
-`--html report.html` writes one self-contained file. It shows each leaked
-answer beside the question, the reference and the grader's own explanation.
+`--html report.html` writes one self-contained file, read like an assay plate:
+rows are your items, columns are controls, and each well is one answer the
+grader was shown. A lit column is a kind of answer the grader cannot see.
+Select a well to read the answer beside the grader's own explanation; `J` and
+`K` step through the leaks.
+
+![The report: a plate of controls with one leaked answer open](docs/report.png)
 
 ## Use it in CI
 

@@ -38,7 +38,7 @@ def threshold_sentence(family: str, curve: dict[str, Any]) -> str:
         still, dose = pct(last["rate"]), pct(last["dose_high"])
         return f"never fails half: {still} still pass with {dose} of {unit}"
     low, high = curve["threshold"]
-    share = f"up to {pct(high)}" if low == 0 else f"{pct(low)}–{pct(high)}"
+    share = f"up to {pct(high)}" if low == 0 else f"{low * 100:.0f}–{pct(high)}"
     return f"fails at least half with {share} of {unit}"
 
 
