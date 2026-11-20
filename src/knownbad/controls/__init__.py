@@ -67,6 +67,8 @@ FAMILIES = (
     "json-value",
     "json-drop",
 )
+# Share of an item's content words a donor reference may repeat.
+MAX_DONOR_OVERLAP = 0.25
 DOSE_FAMILIES = ("splice", "numbers", "json-value", "json-drop")
 
 
@@ -76,10 +78,19 @@ def _pick_donor(item: Item, pool: Sequence[Item], source: random.Random) -> Item
         return None
 
     own = item.reference
+    own_numbers = {m.group() for m in numbers(own)}
 
     def usable(other: Item) -> bool:
         theirs = other.reference
-        return other.id != item.id and bool(theirs) and not same_answer(theirs or "", own)
+        if other.id == item.id or not theirs or same_answer(theirs, own):
+            return False
+        # A donor that repeats this item's facts can be a right answer to it:
+        # "return it within 30 days" answers "how long do I have to return a
+        # tent?" wherever it comes from. Such a donor would make a control
+        # that is not certainly wrong, so it is not used.
+        if own_numbers & {m.group() for m in numbers(theirs)}:
+            return False
+        return overlap(own, theirs) <= MAX_DONOR_OVERLAP
 
     # A few random draws find a donor in any normal set; the full scan only
     # runs for sets where almost every reference is the same.

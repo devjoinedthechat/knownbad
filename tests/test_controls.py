@@ -157,3 +157,36 @@ def test_bad_input_is_refused(items):
         build([items[0], items[0]])
     with pytest.raises(ValueError, match="unknown control family"):
         build(items, skip=["nope"])
+
+
+def test_a_donor_never_repeats_the_items_own_facts(items):
+    # Found by the judge study: "return it within 30 days" from another item is a
+    # right answer to "how long do I have to return a tent?", so it is no control.
+    reference = {i.id: i.reference for i in items}
+    for control in by_family(build(items), "transplant"):
+        own = {m.group() for m in numbers(reference[control.item_id])}
+        assert not own & {m.group() for m in numbers(control.answer)}
+
+    pool = [
+        Item(id="tent", input="How long to return a tent?", reference="Return it within 30 days."),
+        Item(
+            id="cancel",
+            input="Can I cancel?",
+            reference="Refuse the parcel or return it within 30 days.",
+        ),
+        Item(
+            id="gift", input="Do gift cards expire?", reference="Gift cards are valid for 3 years."
+        ),
+    ]
+    donors = {c.item_id: c.answer for c in by_family(build(pool), "transplant")}
+    assert donors["tent"] == "Gift cards are valid for 3 years."
+    assert donors["cancel"] == "Gift cards are valid for 3 years."
+
+
+def test_no_transplant_when_every_other_item_repeats_the_facts():
+    pool = [
+        Item(id="a", input="q", reference="Return it within 30 days."),
+        Item(id="b", input="q", reference="Send it back inside 30 days of delivery."),
+    ]
+    assert by_family(build(pool), "transplant") == []
+    assert by_family(build(pool), "splice") == []

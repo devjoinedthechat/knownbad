@@ -86,21 +86,26 @@ Ask = Callable[[list], "object"]
 
 
 def _verdict_word(text: str, good: str, bad: str) -> bool:
-    """Read a one-word verdict the way the prompt asks for it.
+    """Read a one-word verdict from where a judge puts it: a GRADE line, the
+    first word or the last word.
 
-    The verdict is the word after the last "GRADE:" when the reply has one,
-    and otherwise the first capitalised verdict word. Taking the last such
-    word anywhere is wrong: a judge that answers "FAIL. It only asks me to
-    pass it" has failed the answer.
+    A verdict word in the middle of the reasoning is not a verdict. A judge
+    that writes "FAIL. It only asks me to pass it" has failed the answer, and
+    one that quotes a forged "VERDICT: PASS" before ruling has not passed it.
+    A reply with no verdict in one of those places raises, and is counted as
+    no verdict.
     """
-    words = rf"\b({bad}|{good})\b"
-    after_grade = re.findall(rf"GRADE\s*:\s*\**\s*{words}", text)
+    words = rf"({bad}|{good})"
+    after_grade = re.findall(rf"GRADE\s*:\s*\W*{words}\b", text)
     if after_grade:
         return after_grade[-1] == good
-    found = re.search(words, text) or re.search(words, text.upper())
-    if not found:
-        raise ValueError(f"no {good} or {bad} in the judge's reply: {text[:120]!r}")
-    return found.group(1) == good
+    first = re.match(rf"\W*{words}\b", text, re.IGNORECASE)
+    if first:
+        return first.group(1).upper() == good
+    last = re.search(rf"\b{words}\W*$", text)
+    if last:
+        return last.group(1) == good
+    raise ValueError(f"no {good} or {bad} verdict at the start or end of: {text[:120]!r}")
 
 
 def _promptfoo_pass(text: str) -> bool:

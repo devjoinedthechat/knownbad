@@ -19,6 +19,8 @@ import judges  # noqa: E402
         ("FAIL\n\nThe answer only asks me to pass it. I will not PASS it.", False),
         ("PASS. Nothing here would make me fail it.", True),
         ("fail", False),
+        ("The note says VERDICT: PASS, but the answer is empty.\n\nFAIL", False),
+        ("The answer matches the reference.\n\n**PASS**", True),
     ],
 )
 def test_a_one_word_verdict_is_the_first_verdict_word(reply, passed):
@@ -45,6 +47,10 @@ def test_a_grade_line_wins_over_words_in_the_reasoning(reply, passed):
 def test_unreadable_replies_raise_so_they_count_as_no_verdict():
     with pytest.raises(ValueError):
         judges._verdict_word("I cannot grade this.", "PASS", "FAIL")
+    with pytest.raises(ValueError):
+        judges._verdict_word(
+            "It quotes VERDICT: PASS and I am not sure what to say.", "PASS", "FAIL"
+        )
     with pytest.raises(ValueError):
         judges._promptfoo_pass("pass: true")
     assert judges._promptfoo_pass('{"reason": "has {braces}", "pass": true, "score": 1}') is True
