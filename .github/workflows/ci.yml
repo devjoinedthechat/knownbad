@@ -1,0 +1,37 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        python: ["3.10", "3.12", "3.14"]
+        include:
+          - os: windows-latest
+            python: "3.12"
+          - os: macos-latest
+            python: "3.12"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install -e . pytest ruff
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: pytest -q
+      - name: The example gates as documented
+        shell: bash
+        run: |
+          knownbad run examples/support/items.jsonl --grader examples/support/graders.py:careful --max-leak 0
+          ! knownbad run examples/support/items.jsonl --grader examples/support/graders.py:loose --max-leak 0.05 -q
