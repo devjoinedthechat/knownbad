@@ -17,6 +17,14 @@ HERE = Path(__file__).parent
 LEAK_BAR = 0.05  # must-fail leak rate, levels 1-3
 DOSE_BAR = 0.10  # pass rate at the lowest dose of changed numbers
 GRADERS_NEEDED = 3
+# The smallest edit of each kind: one sentence, one number, one word.
+PROFILE = {
+    "drop": "sentence removed",
+    "splice": "sentence swapped",
+    "numbers": "number changed",
+    "flip": "word reversed",
+    "contradict": "contradiction added",
+}
 
 
 def pct(k: int, n: int) -> str:
@@ -57,10 +65,8 @@ def main() -> int:
                 keys.append("transplant")
             if family.startswith("transplant+"):
                 keys.append("dressed")
-            if family == "numbers" and control.get("edits") == 1:
-                keys.append("one number changed")
-            if family == "splice" and control.get("edits") == 1:
-                keys.append("one sentence swapped")
+            if control.get("edits", 1) == 1 and family in PROFILE:
+                keys.append(PROFILE[family])
             for key in keys:
                 tally[key][0] += passed
                 tally[key][1] += 1
@@ -68,16 +74,7 @@ def main() -> int:
         print(f"No result files in {folder}.")
         return 1
 
-    columns = [
-        "references",
-        "level 0",
-        "level 1",
-        "transplant",
-        "dressed",
-        "must-fail 1-3",
-        "one number changed",
-        "one sentence swapped",
-    ]
+    columns = ["references", "must-fail 1-3", *PROFILE.values()]
     print("| Grader | " + " | ".join(columns) + " | No verdict |")
     print("|---|" + "---|" * (len(columns) + 1))
     over = []
@@ -86,7 +83,7 @@ def main() -> int:
         row = [pct(*tally[c]) for c in columns]
         print(f"| {grader} | " + " | ".join(row) + f" | {tally['errors'][0]} |")
         k, n = tally["must-fail 1-3"]
-        dk, dn = tally["one number changed"]
+        dk, dn = tally["number changed"]
         if (n and k / n >= LEAK_BAR) or (dn and dk / dn >= DOSE_BAR):
             over.append(grader)
     print(

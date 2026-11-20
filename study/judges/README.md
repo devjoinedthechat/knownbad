@@ -14,6 +14,7 @@ what passes.
 | `langchain-cot-qa` | LangChain chain-of-thought QA eval prompt |
 | `promptfoo-rubric` | promptfoo default grading prompt, with a plain "agrees with this reference" rubric |
 | `naive` | A five-line judge of our own, the kind written on day one |
+| `strict` | The same judge with the rule spelled out: every fact, nothing left out, no contradiction |
 
 - **Models**: every judge on Claude Haiku 5.5; three judges on Claude Sonnet 5.5,
   on every third item, because it costs about twenty times more per token.

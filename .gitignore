@@ -19,3 +19,4 @@ build/
 uv.lock
 /study/judges/results-dry/
 /study/judges/results-v1-invalid-donor/
+/study/judges/results-v2-partial/
