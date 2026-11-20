@@ -315,9 +315,12 @@ def _state(outcome: dict[str, Any], violations: set[str]) -> str:
     return "still" if passed else "ok"
 
 
-def _layout(outcomes: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], dict[str, list]]:
+Cells = dict[tuple[str, int], dict[str, Any]]
+
+
+def _layout(outcomes: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], dict[str, Cells]]:
     """Plate columns for this run, and each item's outcomes keyed by column."""
-    per_item: dict[str, dict[tuple[str, int], dict[str, Any]]] = {}
+    per_item: dict[str, Cells] = {}
     slots: dict[str, int] = {}
     for outcome in outcomes:
         control = outcome["control"]
@@ -536,8 +539,13 @@ def _dose(summary: dict[str, Any]) -> str:
     if not curves:
         return ""
     left, right, top, bottom = 44, 520, 16, 196
-    x = lambda dose: left + (right - left) * dose  # noqa: E731
-    y = lambda rate: bottom - (bottom - top) * rate  # noqa: E731
+
+    def x(dose: float) -> float:
+        return left + (right - left) * dose
+
+    def y(share: float) -> float:
+        return bottom - (bottom - top) * share
+
     style = {
         "splice": ("", "var(--ink)", "Sentences swapped"),
         "numbers": ('stroke-dasharray="5 4"', "var(--page)", "Numbers changed"),

@@ -135,6 +135,24 @@ knownbad run items.jsonl --controls controls.jsonl \
 For a judge that is not deterministic, `--trials 3` grades each control three
 times and takes the majority.
 
+## Did a change make the grader better?
+
+Run the same controls file before and after you edit a judge prompt or move
+to a new judge model, then compare:
+
+```bash
+knownbad diff before.json after.json --fail-on-regression
+```
+
+```text
+Wrong answers that passed   17% → 0%   (50 → 0 of 288)
+Reference answers passed    100% → 100%   (24 → 24 of 24)
+50 fixed, 0 broken: the grader is better on these controls (p = 0.000, unlikely to be chance)
+```
+
+It lists every control whose verdict flipped. The p-value comes from an exact
+paired test, so three flips out of three hundred are not read as a trend.
+
 ## Inspect AI tasks
 
 If your eval is an [Inspect AI](https://inspect.aisi.org.uk) task, there is no
@@ -195,10 +213,7 @@ reference. Those measure false rejects.
 
 ## Development
 
-```bash
-uv venv && uv pip install -e . pytest ruff
-.venv/bin/pytest && .venv/bin/ruff check .
-```
+See [CONTRIBUTING.md](CONTRIBUTING.md). The rules for adding a control are there.
 
 ## License
 

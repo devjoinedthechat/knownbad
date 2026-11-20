@@ -83,7 +83,7 @@ def load_callable(spec: str) -> Callable[..., Any]:
             sys.path.insert(0, "")
         module = importlib.import_module(target)
     try:
-        function = getattr(module, name)
+        function: Callable[..., Any] = getattr(module, name)
     except AttributeError:
         raise ValueError(f"{target} has no function {name!r}") from None
     if not callable(function):

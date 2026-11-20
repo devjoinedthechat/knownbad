@@ -29,7 +29,9 @@ def _leak_table(outcomes: Sequence[Outcome], key: str) -> list[dict[str, Any]]:
         control = outcome.control
         if control.expect != FAIL or outcome.errored:
             continue
-        group = (control.level,) if key == "level" else (control.level, control.family)
+        group: tuple[str, ...] = (
+            (control.level,) if key == "level" else (control.level, control.family)
+        )
         groups[group].append(outcome)
     rows = []
     for group in sorted(groups):
@@ -95,7 +97,7 @@ def _order(outcomes: Sequence[Outcome], by_id: dict[str, Outcome]) -> dict[str, 
         pairs += 1
         if ours > theirs + _EPS:
             broken.append(control.id)
-    result = rate(len(broken), pairs)
+    result: dict[str, Any] = dict(rate(len(broken), pairs))
     result["violations"] = broken
     return result
 

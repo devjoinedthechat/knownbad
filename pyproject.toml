@@ -23,7 +23,7 @@ inspect = ["inspect-ai>=0.3.100"]
 knownbad = "knownbad.cli:main"
 
 [dependency-groups]
-dev = ["pytest>=8", "ruff>=0.6", "inspect-ai>=0.3.100"]
+dev = ["pytest>=8", "pytest-cov>=5", "hypothesis>=6", "mypy>=1.10", "ruff>=0.6", "inspect-ai>=0.3.100"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/knownbad"]
@@ -43,3 +43,20 @@ select = ["E", "F", "I", "B", "UP"]
 "src/knownbad/report/html.py" = ["E501"]
 # Quoted judge prompts keep their original line lengths.
 "study/judges/*.py" = ["E501"]
+
+[tool.mypy]
+strict = true
+files = ["src"]
+
+[[tool.mypy.overrides]]
+module = ["inspect_ai", "inspect_ai.*"]
+ignore_missing_imports = true
+
+[tool.coverage.run]
+source = ["knownbad"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 90
+show_missing = true
+skip_covered = true

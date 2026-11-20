@@ -330,7 +330,7 @@ def main(argv: list[str] | None = None) -> int:
             stream.reconfigure(encoding="utf-8", errors="replace")
     args = parser().parse_args(argv)
     try:
-        return args.run(args)
+        return int(args.run(args))
     except (UsageError, ValueError, OSError) as error:
         print(f"knownbad: {error}", file=sys.stderr)
         return EXIT_VOID

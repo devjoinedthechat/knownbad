@@ -70,7 +70,19 @@ class Control:
 
     @classmethod
     def from_dict(cls, raw: dict[str, Any]) -> Control:
-        return cls(**{k: raw.get(k) for k in cls.__dataclass_fields__ if k in raw})
+        dose, edits = raw.get("dose"), raw.get("edits")
+        return cls(
+            id=str(raw["id"]),
+            item_id=str(raw["item_id"]),
+            family=str(raw["family"]),
+            level=str(raw["level"]),
+            expect=str(raw["expect"]),
+            answer=str(raw["answer"]),
+            how=str(raw.get("how", "")),
+            base=None if raw.get("base") is None else str(raw["base"]),
+            dose=None if dose is None else float(dose),
+            edits=None if edits is None else int(edits),
+        )
 
     def to_dict(self) -> dict[str, Any]:
         return {k: v for k, v in asdict(self).items() if v is not None}
