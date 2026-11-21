@@ -63,6 +63,36 @@ say. The prompts do not say what most people assume they say.
 same model. Adding "leaves out nothing the reference states" takes the pass
 rate for an incomplete answer from 40% to 0%.
 
+### What that does to a score
+
+Take two systems on the same items.
+
+- **A** gives the complete right answer on half the items and no answer on
+  the rest. It is fully right half the time.
+- **B** answers every item and leaves one sentence out every time. It is
+  never fully right.
+
+A scores 50% under every judge here, because each passed every reference and
+failed every empty answer. B's score is the "sentence removed" column.
+
+| Judge | A | B, with its 95% interval |
+|---|---|---|
+| `langchain-qa · Haiku 5.5` | 50% | 53% (38%–69%) |
+| `langchain-cot-qa · Haiku 5.5` | 50% | 51% (35%–67%) |
+| `promptfoo-rubric · Haiku 5.5` | 50% | 51% (35%–67%) |
+| `naive · Sonnet 5.5` | 50% | 47% (21%–73%) |
+| `naive · Haiku 5.5` | 50% | 40% (25%–56%) |
+| `inspect-fact · Haiku 5.5` | 50% | 9% (3%–22%) |
+| `inspect-qa · Haiku 5.5` | 50% | 5% (1%–16%) |
+| `inspect-fact · Sonnet 5.5` | 50% | 0% (0%–22%) |
+| `inspect-qa · Sonnet 5.5` | 50% | 0% (0%–22%) |
+| `strict · Haiku 5.5` | 50% | 0% (0%–8%) |
+
+Under the first three, B scores level with A. Under `strict` and Inspect's scorers B scores close to
+nothing. Which of the two is right depends on whether a partial answer is
+acceptable in your eval. The point is that the judge prompt made that choice,
+and the score does not say so.
+
 ## 3. Wrong numbers and reversed claims are caught
 
 | Judge | Number changed | Word reversed | Contradiction added |
@@ -129,8 +159,8 @@ numbers above:
   of plainly wrong answers. Run the controls to confirm it, then look at the
   "What it notices" table.
 - If answers in your eval can be incomplete, check the "missing content" row
-  before trusting a pass rate. A judge that ignores omissions will rate a
-  model that answers half the question as highly as one that answers all of it.
+  before trusting a pass rate. A judge that ignores omissions passes about
+  half of the answers that leave a third of the content out.
 - The first study pass and the example in this repo show where plainly wrong
   answers do pass: graders built on word overlap or pattern matching, and
   verdict parsing in home-made judges.

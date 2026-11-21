@@ -66,6 +66,9 @@ Ten judge setups, 74 items, 10,709 graded controls:
   to 53% of answers with one sentence removed.
 - **Wording decides it**: one added sentence in a five-line judge took that
   from 40% to 0%.
+- **It moves scores**: under three published prompts, a system that never
+  gives a complete answer scores level with one that is fully right half the
+  time.
 
 The full tables, and the two faults the study found in knownbad itself:
 [docs/findings.md](docs/findings.md).
