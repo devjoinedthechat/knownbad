@@ -44,6 +44,8 @@ jobs:
         run: |
           knownbad run examples/support/items.jsonl --grader examples/support/graders.py:careful --max-leak 0
           ! knownbad run examples/support/items.jsonl --grader examples/support/graders.py:loose --max-leak 0.05 -q
+          knownbad run examples/agent/items.jsonl --grader examples/agent/graders.py:reads_the_calls --max-leak 0
+          ! knownbad run examples/agent/items.jsonl --grader examples/agent/graders.py:reads_the_reply --max-leak 0.05 -q
 
   action:
     # The GitHub Action in this repository, used the way the README shows it.
