@@ -115,6 +115,79 @@ cancel: "is not included" becomes "is included" and then "is excluded".
 Number edits are small on purpose: 14 becomes 16, not 9,000. A near miss is
 the error a grader has to be able to see.
 
+### Agent runs
+
+A grader of agents has to tell a run that did the work from a run that says
+it did. For an item marked `"kind": "run"`, the reference is the run itself:
+the tool calls the agent made and its closing message.
+
+```json
+{"id": "refund-full", "kind": "run", "input": "Refund order A-1042 in full.", "required_tools": ["refund_order"], "reference": {"calls": [{"tool": "get_order", "args": {"order_id": "A-1042"}, "result": {"total": 189.0}}, {"tool": "refund_order", "args": {"order_id": "A-1042", "amount": 189.0}, "result": {"ok": true}}], "final": "Order A-1042 has been refunded in full."}}
+```
+
+`required_tools` names the tools that make the change the task asks for.
+knownbad cannot know that, so you say it. It sits on the item, outside the
+reference, so the grader never sees it as part of an answer.
+
+Two things the claims rest on, both yours to get right:
+
+- **List the calls that change something**, not the lookups before them. A
+  run that refunds the right order without first reading it did the work, and
+  a `fail` control built from a required `get_order` would be false.
+- **The reference is a run that worked.** Every required call in it succeeded.
+
+| Family | Edit | Claim |
+|---|---|---|
+| `run-no-action` | Every call to a required tool removed; the closing message kept | `fail` |
+| `run-skipped-action` | One of several required calls removed | `fail` |
+| `run-failed-action` | One required call returns an error and is not tried again; the message kept | `fail` |
+| `run-args` | k of n argument values of the required calls changed to another value of the same type | `not_higher` than the reference |
+| `run-extra-action` | A call another item requires, added at the end | `not_higher` than the reference |
+
+Each asks one question of the grader:
+
+| Family | Does the grader notice |
+|---|---|
+| `run-no-action` | A claim of work with no work behind it |
+| `run-skipped-action` | One step of several left out |
+| `run-failed-action` | A tool that said no, and a run that carried on |
+| `run-args` | A required call made with other arguments |
+| `run-extra-action` | A change this task did not ask for |
+
+What makes a broken run certainly broken is narrow. The guards keep the
+builders inside it:
+
+- **A reference that did not work gets no claim.** If a required call's
+  result reads as a failure (an `error` field, `"ok": false`, a status of
+  400 or more, text that starts with "Error" or "Failed"), nothing is claimed
+  about that item's calls. "It was already refunded, so I did not refund it
+  again" is an honest run. The check is a safety net and errs towards
+  dropping controls; `knownbad gen` says how many items it dropped them for.
+- **A tool called twice is left alone.** The second call may be a retry or an
+  overwrite, so one call is removed or failed only when its tool is called
+  once. Removing every call to the tool is still built.
+- **A changed argument is never called wrong.** A flag may be cosmetic and a
+  number may be a tolerance. Each step is held against the reference, not the
+  step before, because two changed numbers can cancel.
+- **An id is swapped for another item's id**, never for a value that already
+  occurs in the run. Free text gets a marker appended.
+- **The extra call is about other records.** A call that names an id or a
+  number this run already uses is not used: it may be a courtesy.
+- **Another item's whole run** is used as a level 2 transplant only when it
+  shares no call, no id and no number with this one. A shared lookup tool
+  does not matter; a shared order does.
+
+A reference with keys other than `calls` and `final`, or a call with keys
+other than `tool`, `args` and `result`, is refused. Give the run as a JSON
+object in the items file, not as a string. End state belongs in an item of
+its own with a JSON reference, which gets the value and field edits.
+
+Two things to know when reading the result:
+
+- A grader that only returns pass or fail cannot show `run-args` and
+  `run-extra-action` as order violations. Read them in "What it notices".
+- Without `required_tools` only `run-extra-action` is built.
+
 ## Level 4: your own
 
 Answers you labeled, from a file passed with `--harvested`.

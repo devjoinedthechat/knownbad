@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Controls for agent runs. An item marked `"kind": "run"` with a reference
+  of tool calls and a closing message gets five families: a claimed action
+  with no call behind it, a skipped step, a failed call reported as success,
+  changed arguments, and an action nobody asked for.
 - Intervals count items, not controls. Controls of one item tend to pass or
   fail together, and an interval over controls claimed more than the data
   supported. Rows with several controls per item get a wider interval; rows

@@ -12,7 +12,7 @@ from . import __version__
 from .analyze import gate, summarise
 from .cache import Cache, fingerprint
 from .compare import compare, regressions
-from .controls import FAMILIES, build
+from .controls import FAMILIES, build, runs
 from .grader import command_grader, load_callable, python_grader
 from .io import (
     read_controls,
@@ -69,6 +69,8 @@ def cmd_gen(args: argparse.Namespace) -> int:
     print(f"{len(controls)} controls for {len(items)} items → {args.out}")
     for family in sorted(counts):
         print(f"  {family:<24}{counts[family]:>6}")
+    for note in runs.Pool(list(items.values())).notes():
+        print(f"note: {note}")
     return EXIT_OK
 
 

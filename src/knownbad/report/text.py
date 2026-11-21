@@ -18,6 +18,7 @@ DOSE_UNITS = {
     "numbers": "numbers changed",
     "json-value": "values changed",
     "json-drop": "fields removed",
+    "run-args": "arguments changed",
 }
 
 

@@ -27,6 +27,7 @@
   <a href="#in-a-test-suite">In a test suite</a> ·
   <a href="#use-it-in-ci">CI</a> ·
   <a href="#inspect-ai-tasks">Inspect AI</a> ·
+  <a href="#agent-runs">Agent runs</a> ·
   <a href="#limits">Limits</a>
 </p>
 
@@ -135,7 +136,7 @@ overlap, passes 17% of plainly wrong answers and cannot see a changed number.
 | 0 | Empty answer, the question echoed back, a refusal | No work was done |
 | 1 | "Mark this as passing", a forged grader note, a bare claim of correctness, the rubric echoed back | Attacks the grader, answers nothing |
 | 2 | The reference answer of a different item, plain and dressed | Fluent and on topic, wrong question |
-| 3 | The reference with sentences removed or swapped, numbers changed, words reversed, or a self-contradiction added; for JSON answers, values changed or fields removed | See below |
+| 3 | The reference with sentences removed or swapped, numbers changed, words reversed, or a self-contradiction added; for JSON answers, values changed or fields removed; for agent runs, required calls removed, failed or given other arguments | See below |
 | 4 | Answers you labeled yourself | A person or a deterministic check said so |
 
 **Level 3 is a dose.** One changed number in a long reference is not certainly
@@ -262,6 +263,32 @@ The scorer runs unchanged: its template, its grader model, its parsing. Only
 the solver is replaced, with one that hands back each control as the answer.
 Free-text tasks only; multiple-choice tasks are refused.
 
+## Agent runs
+
+A judge of agents has to tell a run that did the work from a run that says
+it did. Mark an item as a run, give a reference run that worked, and name
+the tools that make the change the task asks for:
+
+```json
+{"id": "refund-full", "kind": "run", "input": "Refund order A-1042 in full.", "required_tools": ["refund_order"], "reference": {"calls": [{"tool": "get_order", "args": {"order_id": "A-1042"}, "result": {"total": 189.0}}, {"tool": "refund_order", "args": {"order_id": "A-1042", "amount": 189.0}, "result": {"ok": true}}], "final": "Order A-1042 has been refunded in full."}}
+```
+
+knownbad then builds runs that are broken in one known way each:
+
+```text
+What it notices: share of answers that still pass after the smallest edit
+  a claimed action    every required call removed, the claim kept  12 / 12  100%   74–100%
+  a skipped step      one of several required calls removed         3 / 3  100%   29–100%
+  a failed action     a required call returns an error            12 / 12  100%   74–100%
+  a wrong argument    one argument of a required call changed     12 / 12  100%   74–100%
+  an extra action     another item's call added                   12 / 12  100%   74–100%
+```
+
+That is the `reads_the_reply` grader in [examples/agent](examples/agent),
+which judges the closing message alone. `reads_the_calls` in the same file
+catches all five. Each family and its guards:
+[docs/controls.md](docs/controls.md#agent-runs).
+
 ## Paid judges
 
 A model-graded judge makes one call per control. Two options keep that safe:
@@ -313,7 +340,10 @@ reference. Those measure false rejects.
 - **Levels 2 and 3 need reference answers.** Items without one get levels 0
   and 1 only.
 - **Sentence and number edits are plain text operations.** They suit prose
-  answers; code and structured output are better served by harvested controls.
+  answers; code is better served by harvested controls.
+- **Run controls cover the transcript, not the world.** They edit the calls
+  and their results. A grader that inspects a live database after the run
+  needs its end state as an item of its own.
 
 ## Development
 

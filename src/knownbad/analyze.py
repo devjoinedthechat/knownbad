@@ -156,6 +156,11 @@ PROFILE = (
     ("contradict", "self-contradiction", "a sentence repeated with a changed fact"),
     ("json-value", "a wrong value", "one JSON value changed"),
     ("json-drop", "a missing field", "one JSON field removed"),
+    ("run-no-action", "a claimed action", "every required call removed, the claim kept"),
+    ("run-skipped-action", "a skipped step", "one of several required calls removed"),
+    ("run-failed-action", "a failed action", "a required call returns an error"),
+    ("run-args", "a wrong argument", "one argument of a required call changed"),
+    ("run-extra-action", "an extra action", "another item's call added"),
 )
 
 

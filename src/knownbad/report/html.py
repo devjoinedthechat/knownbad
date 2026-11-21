@@ -16,6 +16,7 @@ import json
 from html import escape
 from typing import Any
 
+from ..controls.runs import FAMILIES as RUN_FAMILIES
 from .text import LEVEL_NAMES, dose_label, pct, span, threshold_sentence
 
 MAX_ISSUE_ROWS = 150  # rows with something to look at
@@ -46,6 +47,15 @@ FIXED_GROUPS: tuple[tuple[str, tuple[tuple[str, str], ...]], ...] = (
         ),
     ),
     ("3 edits", (("contradict", "contradiction"), ("json-truncated", "truncated"))),
+    (
+        "3 run",
+        (
+            ("run-no-action", "no action"),
+            ("run-skipped-action", "skipped step"),
+            ("run-failed-action", "failed action"),
+            ("run-extra-action", "extra action"),
+        ),
+    ),
 )
 SLOT_GROUPS = (
     ("drop", "3 removed →", "sentences removed"),
@@ -54,6 +64,7 @@ SLOT_GROUPS = (
     ("flip", "3 reversed →", "words reversed"),
     ("json-value", "3 values →", "values changed"),
     ("json-drop", "3 fields →", "fields removed"),
+    ("run-args", "3 arguments →", "arguments changed"),
     ("harvested", "4 yours", "your known-bad"),
     ("harvested-good", "4 yours, good", "your known-good"),
 )
@@ -64,6 +75,7 @@ DOSE_NAMES = {
     "numbers": ("Numbers", "Numbers changed"),
     "json-value": ("Values", "Values changed"),
     "json-drop": ("Fields", "Fields removed"),
+    "run-args": ("Arguments", "Arguments changed"),
 }
 # Lines are told apart by dash and marker, never by colour.
 DOSE_STYLES = (
@@ -709,7 +721,7 @@ def render(result: dict[str, Any]) -> str:
         for item_id, item in result.get("items", {}).items()
         if any(c["i"] == item_id for c in controls.values())
     }
-    edited = ["splice", "numbers", "flip", "contradict", "json-value", "json-drop"]
+    edited = ["splice", "numbers", "flip", "contradict", "json-value", "json-drop", *RUN_FAMILIES]
     data = {"c": controls, "items": items, "words": STATE_WORDS, "edited": edited}
     errors = ""
     if summary["errors"]:

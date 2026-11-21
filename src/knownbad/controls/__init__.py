@@ -24,7 +24,7 @@ from ..text import (
     sentences,
     words_without_numbers,
 )
-from . import prose_edits, structured
+from . import prose_edits, runs, structured
 from ._common import cid, dose_steps, rng
 
 REFUSAL = "I'm sorry, but I can't help with that request."
@@ -71,8 +71,9 @@ FAMILIES = (
     "json-truncated",
     "json-value",
     "json-drop",
+    *runs.FAMILIES,
 )
-DOSE_FAMILIES = ("drop", "splice", "numbers", "flip", "json-value", "json-drop")
+DOSE_FAMILIES = ("drop", "splice", "numbers", "flip", "json-value", "json-drop", "run-args")
 
 
 def _pick_donor(item: Item, pool: Sequence[Item], source: random.Random) -> Item | None:
@@ -323,17 +324,26 @@ def build(
         raise ValueError(f"unknown control family: {', '.join(sorted(unknown))}")
 
     generic = _generic_rubrics(items)
+    run_pool = runs.Pool(items)
     controls: list[Control] = []
     for item in items:
-        donor = _pick_donor(item, items, rng(seed, item.id, "donor"))
+        if runs.is_run(item):
+            # Two runs share their key names, which reads as shared content to
+            # the prose check, so a run's donor is chosen by its calls.
+            donor = runs.transplant_donor(item, run_pool, seed)
+        else:
+            donor = _pick_donor(item, items, rng(seed, item.id, "donor"))
         made = [
             *_reference(item),
             *_degenerate(item),
             *_attacks(item, generic),
             *_transplants(item, donor),
-            # A JSON reference gets JSON edits; sentence and number edits are for prose.
+            # A run gets run edits and a JSON reference gets JSON edits; sentence
+            # and number edits are for prose.
             *(
-                structured.build(item, donor, seed)
+                runs.build(item, run_pool, seed)
+                if runs.is_run(item)
+                else structured.build(item, donor, seed)
                 if structured.parse(item.reference) is not None
                 else [
                     *_splice(item, donor, seed),
