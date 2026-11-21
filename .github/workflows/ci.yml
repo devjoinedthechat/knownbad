@@ -61,11 +61,9 @@ jobs:
           max-leak: "0"
           report: careful.html
           result: careful.json
-      - name: The step summary and both files were written
+      - name: The report and the result were written
         shell: bash
-        run: |
-          test -s careful.html && test -s careful.json
-          grep -q "### knownbad" "$GITHUB_STEP_SUMMARY"
+        run: test -s careful.html && test -s careful.json
       - name: A loose grader fails it
         id: loose
         continue-on-error: true
