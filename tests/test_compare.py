@@ -4,6 +4,7 @@ import pytest
 
 from knownbad.cli import main
 from knownbad.compare import compare, regressions
+from knownbad.report import render_diff
 from knownbad.stats import sign_test
 
 
@@ -51,6 +52,42 @@ def test_a_better_grader_shows_as_fixes_and_no_regressions(runs):
     assert regressions(diff) == []
 
 
+def test_the_test_counts_items_not_controls(runs):
+    old = load(runs["careful"])
+    new = load(runs["careful"])
+    # Six wrong answers of one item start to pass. Counted as six flips that
+    # would be p = 0.03; they are one item's verdicts, and one item shows nothing.
+    item = old["outcomes"][0]["control"]["item_id"]
+    turned = 0
+    for outcome in new["outcomes"]:
+        control = outcome["control"]
+        if control["item_id"] == item and control["expect"] == "fail" and turned < 6:
+            outcome["verdicts"] = [{"passed": True}]
+            turned += 1
+    diff = compare(old, new)
+    assert len(diff["moves"]["broken"]) == 6 and diff["direction"] == "worse"
+    assert diff["items"] == {"better": 0, "worse": 1, "mixed": 0}
+    assert diff["p_value"] == 1.0
+    assert diff["leaks"]["new"]["items"] == 24
+    assert regressions(diff) == ["6 wrong answers that were caught now pass"]
+
+
+def test_fixes_and_breaks_inside_one_item_cancel(runs):
+    old, new = load(runs["careful"]), load(runs["careful"])
+    item = old["outcomes"][0]["control"]["item_id"]
+    mine = [
+        i
+        for i, o in enumerate(old["outcomes"])
+        if o["control"]["item_id"] == item and o["control"]["expect"] == "fail"
+    ][:2]
+    old["outcomes"][mine[0]]["verdicts"] = [{"passed": True}]  # fixed in new
+    new["outcomes"][mine[1]]["verdicts"] = [{"passed": True}]  # broken in new
+    diff = compare(old, new)
+    assert diff["items"] == {"better": 0, "worse": 0, "mixed": 1}
+    assert diff["p_value"] is None
+    assert "cancel out within each item" in render_diff(diff)
+
+
 def test_a_worse_grader_is_a_regression(runs):
     diff = compare(load(runs["careful"]), load(runs["loose"]))
     assert diff["direction"] == "worse"
@@ -84,7 +121,7 @@ def test_cli_prints_the_change_and_gates_on_regressions(runs, tmp_path, capsys):
     text = capsys.readouterr().out
     assert "Wrong answers that passed   17% → 0%   (50 → 0 of 288)" in text
     assert "50 fixed, 0 broken: the grader is better" in text
-    assert "unlikely to be chance" in text
+    assert "24 items better, 0 worse (p < 0.001, unlikely to be chance)" in text
 
     saved = tmp_path / "diff.json"
     code = main(

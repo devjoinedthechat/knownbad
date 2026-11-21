@@ -11,7 +11,7 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-from knownbad.stats import interval
+from knownbad.stats import rate
 
 HERE = Path(__file__).parent
 LEAK_BAR = 0.05  # must-fail leak rate, levels 1-3
@@ -27,20 +27,20 @@ PROFILE = {
 }
 
 
-def pct(k: int, n: int) -> str:
+def pct(k: int, n: int, items: set[str]) -> str:
     if not n:
         return "–"
-    low, high = interval(k, n)
-    return f"{k / n:.0%} ({k}/{n}, {low:.0%}–{high:.0%})"
+    row = rate(k, n, len(items))
+    return f"{k / n:.0%} ({k}/{n}, {row['low']:.0%}–{row['high']:.0%})"
 
 
 def main() -> int:
     named = [arg for arg in sys.argv[1:] if not arg.startswith("--")]
     folder = HERE / (named[0] if named else "results-dry" if "--dry-run" in sys.argv else "results")
-    cells = defaultdict(lambda: defaultdict(lambda: [0, 0]))
+    cells = defaultdict(lambda: defaultdict(lambda: [0, 0, set()]))
     cost_tokens = defaultdict(lambda: [0, 0])
     for path in sorted(folder.glob("*.json")):
-        _, judge, model = path.stem.split("__")
+        item_set, judge, model = path.stem.split("__")
         grader = f"{judge} · {model}"
         result = json.loads(path.read_text(encoding="utf-8"))
         for use in result.get("usage", {}).values():
@@ -71,6 +71,7 @@ def main() -> int:
             for key in keys:
                 tally[key][0] += passed
                 tally[key][1] += 1
+                tally[key][2].add(f"{item_set}/{control['item_id']}")
     if not cells:
         print(f"No result files in {folder}.")
         return 1
@@ -83,13 +84,14 @@ def main() -> int:
         tally = cells[grader]
         row = [pct(*tally[c]) for c in columns]
         print(f"| {grader} | " + " | ".join(row) + f" | {tally['errors'][0]} |")
-        k, n = tally["must-fail 1-3"]
-        dk, dn = tally["number changed"]
+        k, n, _ = tally["must-fail 1-3"]
+        dk, dn, _ = tally["number changed"]
         if (n and k / n >= LEAK_BAR) or (dn and dk / dn >= DOSE_BAR):
             over.append(grader)
     print(
         "\nReferences: share that passed (higher is better). Every other column: share of "
-        "wrong or edited answers that passed (lower is better), with the exact 95% interval."
+        "wrong or edited answers that passed (lower is better), with the exact 95% interval "
+        "over items."
     )
     print(
         f"\nGraders over a bar (must-fail leak ≥ {LEAK_BAR:.0%}, or ≥ {DOSE_BAR:.0%} pass with "

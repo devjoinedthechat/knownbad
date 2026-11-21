@@ -500,7 +500,8 @@ def _headline(summary: dict[str, Any]) -> str:
         )
     return (
         "<h1>No wrong answer passed.</h1>"
-        f'<p class="sub">{overall["n"]} controls, all caught: the leak rate on answers like '
+        f'<p class="sub">{overall["n"]} controls from {overall.get("items", overall["n"])} '
+        "items, all caught: the leak rate on answers like "
         f"these is under {pct(overall['high'])} at 95% confidence. That rules out a broken "
         "grader. It does not prove a sharp one.</p>"
     )
@@ -691,7 +692,8 @@ def _families(summary: dict[str, Any]) -> str:
     return (
         "<h2>By control</h2>"
         '<p class="lede">Only controls that must fail are counted. The bracket is the exact '
-        "95% interval: with few items it stays wide even at zero leaks.</p>"
+        "95% interval. It counts items, not controls, because the controls of one item tend "
+        "to pass or fail together: with few items it stays wide even at zero leaks.</p>"
         '<div class="scroll"><table class="t"><thead><tr><th>Level</th><th>Control</th><th class="n">Leaked</th>'
         '<th class="n">Rate</th><th>0 to 100%</th><th class="n">Interval</th></tr></thead>'
         f"<tbody>{''.join(rows)}</tbody></table></div>"

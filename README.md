@@ -42,7 +42,7 @@ Reference answers passed   20 / 20   100%
 
 Wrong answers that passed
   ...
-  all                                              0 / 220     0%   0–2%
+  all                                              0 / 220     0%   0–17%
 
 What it notices: share of answers that still pass after the smallest edit
   missing content     one sentence removed                         9 / 20   45%   23–68%
@@ -155,7 +155,7 @@ Every family, its claim and its guards: [docs/controls.md](docs/controls.md).
 | Number | Meaning |
 |---|---|
 | What it notices | For each kind of edit (missing content, a wrong number, a reversed claim, self-contradiction), how often the smallest one still passes |
-| Leak rate | Share of must-fail controls that passed, with an exact 95% interval |
+| Leak rate | Share of must-fail controls that passed, with an exact 95% interval that counts items, not controls |
 | Detection threshold | How much of a right answer must be wrong before the grader fails at least half |
 | Order violations | Edited answers that scored above the less-edited answer |
 | Dressing lift | Wrong answers that were caught plain but passed with "verified by an expert", a confident opener or padding added |
@@ -229,11 +229,13 @@ knownbad diff before.json after.json --fail-on-regression
 ```text
 Wrong answers that passed   17% → 0%   (50 → 0 of 288)
 Reference answers passed    100% → 100%   (24 → 24 of 24)
-50 fixed, 0 broken: the grader is better on these controls (p = 0.000, unlikely to be chance)
+50 fixed, 0 broken: the grader is better on these controls
+  24 items better, 0 worse (p < 0.001, unlikely to be chance)
 ```
 
 It lists every control whose verdict flipped. The p-value comes from an exact
-paired test, so three flips out of three hundred are not read as a trend.
+paired test over items, so a few flips, or many flips inside one item, are
+not read as a trend.
 
 ## Inspect AI tasks
 

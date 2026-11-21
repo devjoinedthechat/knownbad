@@ -140,6 +140,9 @@ numbers above:
 - Two models from one family. Smaller, older or local judge models were not
   tested and may behave differently.
 - Synthetic items written for the study, in English, with clean references.
+- "0 of 6,283" is many controls from few items. Counted by item, as the
+  report now does, zero leaks puts one judge's rate under 5% on its 74 items
+  and under 14% for the three judges that ran on 25.
 - One trial per control. Rates near zero are firm; the 40–53% rates would
   move a few points on a rerun.
 - Three of the ten judges ran on a third of the items, so their intervals

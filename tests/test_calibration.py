@@ -8,7 +8,7 @@ import pytest
 
 from knownbad import check
 from knownbad.model import FAIL
-from knownbad.stats import interval, sign_test
+from knownbad.stats import interval, rate, sign_test
 
 
 @pytest.mark.parametrize("n", [20, 150])
@@ -22,6 +22,49 @@ def test_the_interval_covers_the_true_rate_at_least_95_times_in_100(n, p):
         covered += low <= p <= high
     # The exact interval covers at least 95%; the bar leaves room for sampling noise.
     assert covered / draws >= 0.935
+
+
+def _clustered_leaks(source, items, per_item, p, together):
+    """Leak counts per item when a share `together` of the variation is between items.
+
+    At 1.0 an item leaks all of its controls or none; at 0.0 every control is
+    its own coin.
+    """
+    counts = []
+    for _ in range(items):
+        if together >= 1.0:
+            chance = 1.0 if source.random() < p else 0.0
+        elif together <= 0.0:
+            chance = p
+        else:
+            spread = (1 - together) / together
+            chance = source.betavariate(p * spread, (1 - p) * spread)
+        counts.append(sum(source.random() < chance for _ in range(per_item)))
+    return counts
+
+
+@pytest.mark.parametrize("together", [0.0, 0.3, 1.0])
+@pytest.mark.parametrize("p", [0.02, 0.1, 0.5])
+def test_the_reported_interval_holds_when_controls_of_an_item_leak_together(p, together):
+    source = random.Random(f"{p}:{together}")
+    items, per_item, draws, covered = 30, 10, 600, 0
+    for _ in range(draws):
+        leaks = sum(_clustered_leaks(source, items, per_item, p, together))
+        row = rate(leaks, items * per_item, items)
+        covered += row["low"] <= p <= row["high"]
+    assert covered / draws >= 0.935
+
+
+def test_counting_controls_as_draws_would_not_hold():
+    # Why the report counts items: the plain interval over controls misses the
+    # true rate far more often than 5 times in 100 once an item's controls agree.
+    source = random.Random(7)
+    items, per_item, p, draws, covered = 30, 10, 0.1, 600, 0
+    for _ in range(draws):
+        leaks = sum(_clustered_leaks(source, items, per_item, p, 1.0))
+        low, high = interval(leaks, items * per_item)
+        covered += low <= p <= high
+    assert covered / draws < 0.7
 
 
 @pytest.mark.parametrize("flips", [6, 20, 60])

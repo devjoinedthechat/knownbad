@@ -18,6 +18,12 @@ DOSE_BINS = ((0.0, 0.25), (0.25, 0.5), (0.5, 0.75), (0.75, 1.0))
 _EPS = 1e-9
 
 
+def _share(members: Sequence[Outcome], hits: int | None = None) -> dict[str, Any]:
+    """The share of `members` that passed, with an interval that counts items."""
+    k = sum(1 for o in members if o.passed) if hits is None else hits
+    return dict(rate(k, len(members), len({o.control.item_id for o in members})))
+
+
 def _order_values(ours: Outcome, base: Outcome) -> tuple[float | None, float | None]:
     """The two numbers to compare: scores when both have one, else pass shares.
 
@@ -45,7 +51,7 @@ def _leak_table(outcomes: Sequence[Outcome], key: str) -> list[dict[str, Any]]:
         row: dict[str, Any] = {"level": group[0]}
         if key == "family":
             row["family"] = group[1]
-        row.update(rate(sum(1 for o in members if o.passed), len(members)))
+        row.update(_share(members))
         row["flaky"] = sum(1 for o in members if o.flaky)
         rows.append(row)
     return rows
@@ -82,13 +88,13 @@ def _dose_curves(outcomes: Sequence[Outcome], by_id: dict[str, Outcome]) -> dict
 def _dose_point(low: float, high: float, members: Sequence[Outcome]) -> dict[str, Any]:
     scores = [s for s in (o.mean_score for o in members) if s is not None]
     point: dict[str, Any] = {"dose_low": low, "dose_high": high}
-    point.update(rate(sum(1 for o in members if o.passed), len(members)))
+    point.update(_share(members))
     point["mean_score"] = sum(scores) / len(scores) if scores else None
     return point
 
 
 def _order(outcomes: Sequence[Outcome], by_id: dict[str, Outcome]) -> dict[str, Any]:
-    pairs = 0
+    compared: list[Outcome] = []
     broken: list[str] = []
     for outcome in outcomes:
         control = outcome.control
@@ -103,10 +109,10 @@ def _order(outcomes: Sequence[Outcome], by_id: dict[str, Outcome]) -> dict[str, 
         ours, theirs = _order_values(outcome, base)
         if ours is None or theirs is None:
             continue
-        pairs += 1
+        compared.append(outcome)
         if ours > theirs + _EPS:
             broken.append(control.id)
-    result: dict[str, Any] = dict(rate(len(broken), pairs))
+    result = _share(compared, len(broken))
     result["violations"] = broken
     return result
 
@@ -169,7 +175,7 @@ def _profile(outcomes: Sequence[Outcome]) -> list[dict[str, Any]]:
         if not smallest:
             continue
         row: dict[str, Any] = {"family": family, "notices": notices, "edit": edit}
-        row.update(rate(sum(1 for o in smallest if o.passed), len(smallest)))
+        row.update(_share(smallest))
         rows.append(row)
     return rows
 
@@ -177,7 +183,7 @@ def _profile(outcomes: Sequence[Outcome]) -> list[dict[str, Any]]:
 def _consistency(outcomes: Sequence[Outcome]) -> dict[str, Any]:
     """With repeated trials: how often the grader gave one answer the same verdict."""
     repeated = [o for o in outcomes if len(o.graded) >= 2]
-    result: dict[str, Any] = dict(rate(sum(1 for o in repeated if not o.flaky), len(repeated)))
+    result = _share(repeated, sum(1 for o in repeated if not o.flaky))
     result["split"] = [o.control.id for o in repeated if o.flaky]
     return result
 
@@ -188,9 +194,9 @@ def summarise(outcomes: Sequence[Outcome]) -> dict[str, Any]:
     errors = len(outcomes) - len(graded)
 
     good = [o for o in graded if o.control.expect == PASS]
-    references = rate(sum(1 for o in good if o.passed), len(good))
+    references = _share(good)
     must_fail = [o for o in graded if o.control.expect == FAIL]
-    overall = rate(sum(1 for o in must_fail if o.passed), len(must_fail))
+    overall = _share(must_fail)
 
     reference_total = sum(1 for o in outcomes if o.control.expect == PASS)
     void: str | None = None

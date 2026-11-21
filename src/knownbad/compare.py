@@ -4,6 +4,10 @@ The controls are the fixed weight. When the same controls give different
 verdicts in two runs, the grader moved. The pairing matters statistically
 too: each control is its own comparison, so the test looks only at controls
 whose verdict flipped.
+
+Controls of one item tend to flip together, so the test counts items, not
+controls: an item is better when more of its wrong answers were fixed than
+broken, and worse the other way round.
 """
 
 from __future__ import annotations
@@ -36,6 +40,8 @@ def compare(old: dict[str, Any], new: dict[str, Any]) -> dict[str, Any]:
     unreadable: list[str] = []
     leaks_before = leaks_after = must_fail = 0
     refs_before = refs_after = refs = 0
+    must_fail_items: set[str] = set()
+    net: dict[str, int] = {}  # per item: wrong answers fixed minus wrong answers broken
     for control_id in shared:
         a, b = before[control_id], after[control_id]
         if a.errored or b.errored:
@@ -44,13 +50,17 @@ def compare(old: dict[str, Any], new: dict[str, Any]) -> dict[str, Any]:
         was, now = bool(a.passed), bool(b.passed)
         expect = a.control.expect
         if expect == FAIL:
+            item_id = a.control.item_id
             must_fail += 1
+            must_fail_items.add(item_id)
             leaks_before += was
             leaks_after += now
             if was and not now:
                 moves["fixed"].append(control_id)
+                net[item_id] = net.get(item_id, 0) + 1
             elif now and not was:
                 moves["broken"].append(control_id)
+                net[item_id] = net.get(item_id, 0) - 1
         elif expect == PASS:
             refs += 1
             refs_before += was
@@ -63,6 +73,9 @@ def compare(old: dict[str, Any], new: dict[str, Any]) -> dict[str, Any]:
             moves["now_passes" if now else "now_fails"].append(control_id)
 
     fixed, broken = len(moves["fixed"]), len(moves["broken"])
+    better = sum(1 for change in net.values() if change > 0)
+    worse = sum(1 for change in net.values() if change < 0)
+    spread = len(must_fail_items)
     return {
         "old": {"grader": old.get("grader"), "created": old.get("created")},
         "new": {"grader": new.get("grader"), "created": new.get("created")},
@@ -70,11 +83,15 @@ def compare(old: dict[str, Any], new: dict[str, Any]) -> dict[str, Any]:
         "only_old": len(before) - len(shared),
         "only_new": len(after) - len(shared),
         "unreadable": unreadable,
-        "leaks": {"old": rate(leaks_before, must_fail), "new": rate(leaks_after, must_fail)},
+        "leaks": {
+            "old": rate(leaks_before, must_fail, spread),
+            "new": rate(leaks_after, must_fail, spread),
+        },
+        "items": {"better": better, "worse": worse, "mixed": len(net) - better - worse},
         "references": {"old": rate(refs_before, refs), "new": rate(refs_after, refs)},
         "moves": moves,
-        # Could this many more fixes than breaks (or the reverse) be chance?
-        "p_value": sign_test(fixed, broken),
+        # Could this many more items better than worse (or the reverse) be chance?
+        "p_value": sign_test(better, worse),
         "direction": "better" if fixed > broken else "worse" if broken > fixed else "same",
     }
 

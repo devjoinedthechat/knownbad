@@ -111,3 +111,12 @@ def test_gate_limits(items):
     assert len(gate(summary, 0.0, {})) == 1
     reasons = gate(summary, None, {"0": 0.0, "2": 0.1})
     assert len(reasons) == 1 and reasons[0].startswith("level 2")
+
+
+def test_every_rate_says_how_many_items_stand_behind_it(items):
+    summary = summary_for(items, lambda item, answer: answer == item["reference"])
+    overall = summary["overall"]
+    assert overall["items"] == len(items) < overall["n"]
+    # No leak in 288 controls would read as "under 1.3%"; from 24 items it is "under 14%".
+    assert overall["k"] == 0 and 0.13 < overall["high"] < 0.15
+    assert all(row["items"] <= len(items) for row in summary["families"] + summary["profile"])

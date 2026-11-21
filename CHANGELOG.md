@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- Intervals count items, not controls. Controls of one item tend to pass or
+  fail together, and an interval over controls claimed more than the data
+  supported. Rows with several controls per item get a wider interval; rows
+  with one per item are unchanged. Every rate in a result file now carries
+  `items`.
+- `knownbad diff` tests items, not single flips, for the same reason. The
+  result has an `items` count of better, worse and mixed.
+
 ## 0.1.0
 
 First release.

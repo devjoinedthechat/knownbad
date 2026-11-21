@@ -84,7 +84,7 @@ def render(result: dict[str, Any], limit: int = 8) -> str:
 
     if summary["families"]:
         out("Wrong answers that passed")
-        out(f"  {'level':<21}{'control':<24}{'leaked':>11}{'rate':>7}   95% interval")
+        out(f"  {'level':<21}{'control':<24}{'leaked':>11}{'rate':>7}   95% interval, by item")
         for row in summary["families"]:
             level = f"{row['level']} {LEVEL_NAMES.get(row['level'], '')}"
             count = f"{row['k']} / {row['n']}"
@@ -172,14 +172,20 @@ def render_diff(diff: dict[str, Any], limit: int = 10) -> str:
             f"   ({refs['old']['k']} → {refs['new']['k']} of {refs['old']['n']})"
         )
     fixed, broken = len(diff["moves"]["fixed"]), len(diff["moves"]["broken"])
-    if diff["p_value"] is None:
+    items = diff.get("items") or {}
+    if not fixed and not broken:
         out("No must-fail control changed its verdict.")
     else:
-        sure = "unlikely to be chance" if diff["p_value"] < 0.05 else "could be chance"
-        out(
-            f"{fixed} fixed, {broken} broken: the grader is {diff['direction']} on these "
-            f"controls (p = {diff['p_value']:.3f}, {sure})"
-        )
+        out(f"{fixed} fixed, {broken} broken: the grader is {diff['direction']} on these controls")
+        if diff["p_value"] is None:
+            out("  the changes cancel out within each item, so there is nothing to test")
+        else:
+            sure = "unlikely to be chance" if diff["p_value"] < 0.05 else "could be chance"
+            p_value = "p < 0.001" if diff["p_value"] < 0.001 else f"p = {diff['p_value']:.3f}"
+            out(
+                f"  {items.get('better', 0)} items better, {items.get('worse', 0)} worse "
+                f"({p_value}, {sure})"
+            )
     for name, title in MOVE_TITLES.items():
         ids = diff["moves"][name]
         if not ids:
