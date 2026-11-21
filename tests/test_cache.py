@@ -93,3 +93,48 @@ def test_cli_cache_round_trip(tmp_path, items_path, graders_path, capsys):
     assert main([*args, "-o", str(out)]) == 0
     assert "493 of 493 verdicts came from" in capsys.readouterr().out
     assert json.loads(out.read_text())["summary"] == first
+
+
+def test_the_same_answer_reached_by_many_workers_at_once_is_asked_once(tmp_path):
+    # Two controls of one item can be the same answer. Without a cache hit yet,
+    # every worker that reaches one would call a paid judge for it.
+    import time
+
+    item = Item(id="a", input="How many days?", reference="Within 30 days.")
+    control = next(c for c in build([item]) if c.family == "empty")
+    lock, calls = threading.Lock(), []
+
+    def slow(item, answer):
+        with lock:
+            calls.append(answer)
+        time.sleep(0.05)
+        return False
+
+    cache = Cache(tmp_path / "c.jsonl", "g")
+    outcomes = run([control] * 12, {"a": item}, python_grader(slow), workers=12, cache=cache)
+    assert len(calls) == 1 and cache.hits == 11
+    assert all(o.passed is False for o in outcomes)
+    assert len((tmp_path / "c.jsonl").read_text().splitlines()) == 1
+
+
+def test_a_worker_that_waited_on_a_call_with_no_verdict_asks_for_itself(tmp_path):
+    import time
+
+    item = Item(id="a", input="How many days?", reference="Within 30 days.")
+    control = next(c for c in build([item]) if c.family == "empty")
+    lock, state = threading.Lock(), {"calls": 0}
+
+    def first_fails(item, answer):
+        with lock:
+            state["calls"] += 1
+            mine = state["calls"]
+        time.sleep(0.05)
+        if mine == 1:
+            raise TimeoutError("busy")
+        return False
+
+    cache = Cache(tmp_path / "c.jsonl", "g")
+    outcomes = run([control] * 6, {"a": item}, python_grader(first_fails), workers=6, cache=cache)
+    # One call failed and is not cached; one more was made; the rest took its verdict.
+    assert state["calls"] == 2
+    assert sum(o.errored for o in outcomes) == 1 and sum(o.passed is False for o in outcomes) == 5

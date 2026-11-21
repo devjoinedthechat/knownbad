@@ -14,6 +14,9 @@
 - `knownbad diff` tests items, not single flips, for the same reason. The
   result has an `items` count of better, worse and mixed.
 
+- With `--cache`, the same answer reached by two workers at once is asked
+  once. Before, both could miss the cache and both called the judge.
+
 ## 0.1.0
 
 First release.

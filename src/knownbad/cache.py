@@ -16,6 +16,7 @@ import hashlib
 import importlib.util
 import json
 import threading
+from collections.abc import Callable
 from pathlib import Path
 
 from .model import Control, Item, Verdict
@@ -57,6 +58,7 @@ class Cache:
         self.hits = 0
         self._lock = threading.Lock()
         self._seen: dict[str, Verdict] = {}
+        self._asking: dict[str, threading.Event] = {}
         if self.path.exists():
             with open(self.path, encoding="utf-8") as handle:
                 for line in handle:
@@ -85,3 +87,31 @@ class Cache:
             self._seen[key] = verdict
             with open(self.path, "a", encoding="utf-8", newline="\n") as handle:
                 handle.write(json.dumps({"key": key, "verdict": verdict.to_dict()}) + "\n")
+
+    def get_or_ask(self, key: str, ask: Callable[[], Verdict]) -> Verdict:
+        """The cached verdict for `key`, or the result of `ask`, called at most once at a time.
+
+        Two controls can be the same answer, and two workers can reach them in
+        the same moment. Both would miss the cache and both would call the
+        grader. The second one waits for the first instead, and takes its
+        verdict. If the first got no verdict, the second asks for itself.
+        """
+        while True:
+            with self._lock:
+                found = self._seen.get(key)
+                if found is not None:
+                    self.hits += 1
+                    return found
+                waiting = self._asking.get(key)
+                if waiting is None:
+                    mine = self._asking[key] = threading.Event()
+                    break
+            waiting.wait()
+        try:
+            verdict = ask()
+            self.put(key, verdict)
+            return verdict
+        finally:
+            with self._lock:
+                del self._asking[key]
+            mine.set()

@@ -92,20 +92,19 @@ def run(
     def grade(job: tuple[int, Control, int]) -> tuple[int, Verdict]:
         index, control, trial = job
         item = items[control.item_id]
-        key = cache.key(item, control, trial) if cache else None
-        if cache and key:
-            known = cache.get(key)
-            if known is not None:
-                return index, known
-        verdict = grader(item, control.answer)
-        for attempt in range(retries):
-            if verdict.passed is not None:
-                break
-            time.sleep(retry_wait * 2**attempt)
+
+        def ask() -> Verdict:
             verdict = grader(item, control.answer)
-        if cache and key:
-            cache.put(key, verdict)
-        return index, verdict
+            for attempt in range(retries):
+                if verdict.passed is not None:
+                    break
+                time.sleep(retry_wait * 2**attempt)
+                verdict = grader(item, control.answer)
+            return verdict
+
+        if cache is None:
+            return index, ask()
+        return index, cache.get_or_ask(cache.key(item, control, trial), ask)
 
     done = 0
     with ThreadPoolExecutor(max_workers=max(1, workers)) as pool:
