@@ -1,0 +1,34 @@
+name: A control that is not wrong
+description: knownbad called an answer wrong, and it is a right answer.
+labels: [control]
+body:
+  - type: markdown
+    attributes:
+      value: This is the most useful report there is. A control whose claim is false makes every number built on it false.
+  - type: textarea
+    id: item
+    attributes:
+      label: The item
+      description: One line of your items file. Replace anything private; the shape is what matters.
+      render: json
+    validations:
+      required: true
+  - type: textarea
+    id: control
+    attributes:
+      label: The control
+      description: Its line from the controls file, or its id and answer from the report.
+      render: json
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why the answer is right
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: knownbad version
+      description: The output of `knownbad --version`.

@@ -1,0 +1,22 @@
+name: Something else is broken
+description: A crash, a wrong number in the report, a command that does not do what the README says.
+labels: [bug]
+body:
+  - type: textarea
+    id: did
+    attributes:
+      label: What you ran
+      render: bash
+    validations:
+      required: true
+  - type: textarea
+    id: got
+    attributes:
+      label: What happened, and what you expected
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: knownbad and Python version
+      description: The output of `knownbad --version` and `python --version`.
