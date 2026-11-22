@@ -25,7 +25,12 @@ def _cdf(k: int, n: int, p: float) -> float:
         return 0.0
     if k >= n:
         return 1.0
-    return min(1.0, math.fsum(math.exp(_log_pmf(i, n, p)) for i in range(k + 1)))
+    # Sum the shorter tail: near k = n the lower one has n terms, and the
+    # interval solves for p sixty times.
+    if k < n // 2:
+        return min(1.0, math.fsum(math.exp(_log_pmf(i, n, p)) for i in range(k + 1)))
+    upper = math.fsum(math.exp(_log_pmf(i, n, p)) for i in range(k + 1, n + 1))
+    return min(1.0, max(0.0, 1.0 - upper))
 
 
 def _solve(target: float, k: int, n: int) -> float:

@@ -83,6 +83,9 @@ def test_a_bumped_number_is_a_different_number_in_the_same_notation(literal, see
     assert ("." in changed) == ("." in literal)
 
 
+# A correctness property, not a speed one: under coverage on a loaded machine
+# one call took 443 ms and its retry 76 ms, so the default deadline is noise.
+@settings(deadline=None)
 @given(st.integers(1, 400).flatmap(lambda n: st.tuples(st.integers(0, n), st.just(n))))
 def test_the_interval_always_contains_the_observed_rate(pair):
     k, n = pair
