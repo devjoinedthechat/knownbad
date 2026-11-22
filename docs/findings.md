@@ -17,6 +17,9 @@ one claim, and the claim failed. What it found instead is more useful.
 
 Details and the code: [study/judges](../study/judges).
 
+Judges of agent runs are a separate study:
+[findings-agents.md](findings-agents.md).
+
 ## 1. No judge passed a plainly wrong answer
 
 | Controls | Passed |

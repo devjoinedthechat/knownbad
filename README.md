@@ -74,6 +74,16 @@ Ten judge setups, 74 items, 10,709 graded controls:
 The full tables, and the two faults the study found in knownbad itself:
 [docs/findings.md](docs/findings.md).
 
+Five judges of agent runs, 40 runs, three trials each:
+
+- **A judge with a reference run caught every broken run.**
+- **Without one, a claim can stand in for the work**: DeepEval's task
+  completion metric passed 50% of runs that never made the required call
+  but said they had, and LangChain's agentevals passed 15%.
+
+The tables and how each judge misses it:
+[docs/findings-agents.md](docs/findings-agents.md).
+
 ## Why
 
 - A score from an unchecked grader is a number, not a measurement.
@@ -287,7 +297,8 @@ What it notices: share of answers that still pass after the smallest edit
 That is the `reads_the_reply` grader in [examples/agent](examples/agent),
 which judges the closing message alone. `reads_the_calls` in the same file
 catches all five. Each family and its guards:
-[docs/controls.md](docs/controls.md#agent-runs).
+[docs/controls.md](docs/controls.md#agent-runs). What published judges of
+agent runs make of these controls: [docs/findings-agents.md](docs/findings-agents.md).
 
 ## Paid judges
 

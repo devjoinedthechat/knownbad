@@ -16,6 +16,10 @@
 - Judge study: the smallest edits graded three times on all seven Haiku
   judges, through Claude Code. The split on missing content holds in every
   trial; rates in the middle move by up to 18 points between trials.
+- Agent study: five judges of agent runs on 40 runs, three trials each.
+  Judges given a reference run caught every broken run; DeepEval's task
+  completion metric passed half of the runs that claimed an action they did
+  not make. See docs/findings-agents.md.
 - With `--cache`, the same answer reached by two workers at once is asked
   once. Before, both could miss the cache and both called the judge.
 

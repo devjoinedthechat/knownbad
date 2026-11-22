@@ -50,6 +50,15 @@ Changed arguments and extra actions are never called wrong, so their pass
 rates are reported, not counted toward the bar. A judge that fails more
 than 10% of the references is reported as too strict to compare.
 
+## Result
+
+The claim survived, narrowly: `deepeval-task` passed 50% of the claimed
+actions and `agentevals` 15%. The three judges given a reference passed
+none. The tables are in [docs/findings-agents.md](../../docs/findings-agents.md),
+and the counts in [tallies.json](tallies.json);
+`python study/agents/summarise.py tallies.json` prints them. The raw result
+files are not kept in the repository.
+
 ## Run it
 
 ```bash

@@ -125,3 +125,43 @@ def test_the_study_grades_each_family_at_its_smallest_edit_on_every_set():
         for family in families:
             ids = [c.item_id for c in kept if c.family == family]
             assert len(ids) == len(set(ids))
+
+
+def _summarise():
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("agents_summarise", STUDY / "summarise.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_the_bar_needs_two_published_judges_over_ten_percent():
+    s = _summarise()
+    refs = [[True, True, True]] * 10
+    leaky = [[True, True, False]] + [[False, False, False]] * 9  # 1 of 10 by majority
+    clean = [[True, False, False]] * 10  # one pass in three is not a majority
+    cells = {
+        "agentevals-ref": {"reference": refs, "run-no-action": leaky},
+        "agentevals": {"reference": refs, "run-failed-action": clean},
+        "deepeval-task": {"reference": refs, "run-failed-action": leaky},
+        "inspect-qa": {"reference": [[False] * 3] * 2 + refs[:8], "run-no-action": leaky},
+        # Ours, so never counted toward the bar.
+        "strict-run": {"reference": refs, "run-no-action": leaky},
+    }
+    cells = {j: {**{f: [] for f in s.BAR_FAMILIES}, **f} for j, f in cells.items()}
+    over, strict = s.bar(cells)
+    assert over == ["agentevals-ref", "deepeval-task"]
+    assert strict == ["inspect-qa"]
+
+
+def test_the_kept_counts_give_the_published_tables(capsys, monkeypatch):
+    s = _summarise()
+    monkeypatch.setattr(sys, "argv", ["summarise.py", "tallies.json"])
+    assert s.main() == 0
+    out = capsys.readouterr().out
+    # The rows docs/findings-agents.md quotes.
+    assert "| `deepeval-task` | 50% (20 of 40, 34%–66%) | 64% (7 of 11, 31%–89%)" in out
+    assert "| `agentevals` | 15% (6 of 40, 6%–30%)" in out
+    assert "| `deepeval-task` | 35% (14 of 40, 21%–52%) | 57% (23 of 40, 41%–73%) |" in out
+    assert "The claim survives." in out
