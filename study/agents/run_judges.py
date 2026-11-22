@@ -320,10 +320,26 @@ def _json_object(text: str) -> dict[str, Any]:
 
 
 def openevals_score(text: str) -> bool:
-    score = _json_object(text).get("score")
-    if not isinstance(score, bool):
-        raise ValueError(f"no boolean 'score' in the judge's reply: {text[:120]!r}")
-    return score
+    """The boolean score of the reply.
+
+    openevals gets it through structured output, so its judge cannot send
+    malformed JSON. Here the schema is only asked for in text, and a reply
+    can break the JSON with an unescaped quote in its reasoning or send the
+    score as a string. Both are read as structured output would have taken
+    them: the last "score" field, true or false.
+    """
+    try:
+        score = _json_object(text).get("score")
+    except ValueError:
+        score = None
+    if isinstance(score, str) and score.strip().lower() in ("true", "false"):
+        score = score.strip().lower() == "true"
+    if isinstance(score, bool):
+        return score
+    found = re.findall(r'"score"\s*:\s*"?(true|false)\b', text, re.IGNORECASE)
+    if found:
+        return found[-1].lower() == "true"
+    raise ValueError(f"no boolean 'score' in the judge's reply: {text[:120]!r}")
 
 
 def deepeval_verdict(text: str) -> float:

@@ -68,13 +68,16 @@ def test_the_tools_called_are_printed_as_deepeval_prints_them():
     [
         ('{"reasoning": "Fine. Thus, the score should be: true.", "score": true}', True),
         ('Here it is:\n{"reasoning": "No refund call.", "score": false}', False),
+        # What structured output would have kept from replies sent as text.
+        ('{"reasoning": "It says "done" but made no call.", "score": false}', False),
+        ('{"reasoning": "Fine.", "score": "true"}', True),
     ],
 )
 def test_the_openevals_score_is_read_from_the_json(reply, passed):
     assert j.openevals_score(reply) is passed
 
 
-@pytest.mark.parametrize("reply", ["true", '{"score": "true"}', '{"reasoning": "x"}'])
+@pytest.mark.parametrize("reply", ["true", '{"score": "yes"}', '{"reasoning": "x"}'])
 def test_a_reply_without_a_boolean_score_is_no_verdict(reply):
     with pytest.raises(ValueError):
         j.openevals_score(reply)
