@@ -60,11 +60,31 @@ resumes where it left off, and any cell opens as a report:
 knownbad report study/judges/results/facts__naive__claude-haiku-5-5.json --html cell.html
 ```
 
+### Three trials through a Claude subscription
+
+`repeat.py` grades the references and the smallest edits three times on
+every judge. It runs on Claude Haiku 5.5 through the Claude Code CLI, so it
+needs a logged-in Claude Code and no API key:
+
+```bash
+export KNOWNBAD_CLAUDE_BIN=/path/to/claude   # if claude is not on PATH
+python study/judges/repeat.py --trials 3 --workers 6
+python study/judges/summarise_repeat.py --save
+```
+
+A stopped run resumes and skips finished cells. The counts are kept in
+[tallies-repeat.json](tallies-repeat.json), and
+`python study/judges/summarise_repeat.py tallies-repeat.json` prints the
+tables from them. The results are section 4 of
+[docs/findings.md](../../docs/findings.md#4-over-three-trials).
+
 ## Limits
 
 - Synthetic items, written for this study. Real eval sets are messier.
-- One trial per control. Judges vary between calls; rates near a bar need
-  repeats before they are quoted.
+- One trial per control in the main run. The repeat run shows rates in the
+  middle move by up to 18 points between trials; rates near zero do not.
+- Claude Code adds about 1,000 tokens of its own context to every call, so
+  the repeat run is not a straight rerun of the API run.
 - Inspect scores a reply it cannot parse as incorrect. That counts here as a
   caught control, because it is what an Inspect user would get.
 - The promptfoo rubric wording is ours. promptfoo leaves the rubric to the user.

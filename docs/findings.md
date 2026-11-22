@@ -61,7 +61,8 @@ say. The prompts do not say what most people assume they say.
 
 **Wording decides it.** `naive` and `strict` are the same five lines on the
 same model. Adding "leaves out nothing the reference states" takes the pass
-rate for an incomplete answer from 40% to 0%.
+rate for an incomplete answer from 40% to 0%. Over three trials it was 33%
+to 9% ([section 4](#4-over-three-trials)).
 
 ### What that does to a score
 
@@ -119,6 +120,57 @@ and the score does not say so.
   of cases, `promptfoo-rubric` in 8%. Some of those passes are defensible:
   "HTTP 200 means success. HTTP 203 means success." is true twice.
 
+## 4. Over three trials
+
+Sections 1 to 3 graded each control once. This run, on 2026-11-22, graded the
+smallest edits three times each on all seven Haiku 5.5 judges.
+
+It is not the same setup, so compare the pattern, not single numbers:
+
+- The calls went through the Claude Code CLI on a Claude subscription. It
+  adds about 1,000 tokens of its own context to every call.
+- The controls were rebuilt with the current knownbad, so a few counts
+  differ (48 reversed words, not 45).
+
+It used 11.8 million tokens, and every call got a verdict.
+
+| Judge | Sentence removed, by majority | Each trial | Same verdict all three times |
+|---|---|---|---|
+| `langchain-cot-qa` | 58% (42%–73%) | 58%, 53%, 56% | 93% (40 of 43) |
+| `langchain-qa` | 37% (23%–53%) | 44%, 26%, 40% | 74% (32 of 43) |
+| `promptfoo-rubric` | 37% (23%–53%) | 35%, 30%, 40% | 79% (34 of 43) |
+| `naive` | 33% (19%–49%) | 33%, 30%, 33% | 84% (36 of 43) |
+| `strict` | 9% (3%–22%) | 5%, 16%, 9% | 84% (36 of 43) |
+| `inspect-fact` | 7% (1%–19%) | 7%, 5%, 5% | 95% (41 of 43) |
+| `inspect-qa` | 7% (1%–19%) | 5%, 7%, 5% | 95% (41 of 43) |
+
+"By majority" counts an answer as passed when two of its three verdicts
+passed it.
+
+- **The split holds.** The same four judges passed a third or more of the
+  incomplete answers in every trial. Inspect's two stayed at 7% or under in
+  every trial. No judge changed sides.
+- **Mid-range rates move.** `langchain-qa` went from 44% to 26% to 40% on
+  the same 43 answers, and a quarter of its verdicts on them changed between
+  trials. Quote a rate like that from repeats, or with its interval.
+- **`strict` is not zero here.** It passed 5% to 16% per trial. Wording still
+  decides most of it: `naive` passed 33%.
+- **The score example holds in shape.** System B from
+  section 2 would score 37% under `langchain-qa` here, not 53%. A prompt
+  still sets a partial answer's score to a third or more under four judges
+  and near zero under three; the exact tie with A was one trial.
+- **Wrong content is caught steadily.** For a changed number, a reversed
+  word and an added contradiction, no judge passed more than 7% by majority,
+  and at least 92% of those answers got the same verdict all three times.
+  `inspect-qa` passed 7% of contradictions (5 of 73), against 14% in one
+  trial.
+- **References.** Every judge passed all 74 by majority. Of the 1,554
+  single verdicts on them, three failed: two from `inspect-qa`, one from
+  `naive`.
+
+The counts are in
+[tallies-repeat.json](../study/judges/tallies-repeat.json).
+
 ## What we got wrong on the way
 
 The study found two faults in our own instrument before it found anything
@@ -173,8 +225,11 @@ numbers above:
 - "0 of 6,283" is many controls from few items. Counted by item, as the
   report now does, zero leaks puts one judge's rate under 5% on its 74 items
   and under 14% for the three judges that ran on 25.
-- One trial per control. Rates near zero are firm; the 40–53% rates would
-  move a few points on a rerun.
+- One trial per control in sections 1 to 3. Section 4 repeats the smallest
+  edits three times: rates near zero stayed near zero, and rates in the
+  middle moved by up to 18 points between trials.
+- Section 4 ran through Claude Code, which adds its own context to each
+  call, so its rates are not a straight rerun of the API run.
 - Three of the ten judges ran on a third of the items, so their intervals
   are wide.
 - The promptfoo rubric wording and both `naive` and `strict` prompts are ours.

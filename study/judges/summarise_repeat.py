@@ -1,6 +1,8 @@
 """Tables for the repeat run: how steady each judge's pass rate is over three trials.
 
-python study/judges/summarise_repeat.py            # reads results-repeat/
+python study/judges/summarise_repeat.py                     # reads results-repeat/
+python study/judges/summarise_repeat.py --save              # also writes tallies-repeat.json
+python study/judges/summarise_repeat.py tallies-repeat.json # the kept counts, no raw files
 """
 
 from __future__ import annotations
@@ -24,6 +26,12 @@ FAMILIES = {
 
 def load(folder: Path) -> dict[str, dict[str, list[list[bool]]]]:
     """Per judge and family: the verdicts each answer got, one list per answer."""
+    if folder.suffix == ".json":
+        kept = json.loads(folder.read_text(encoding="utf-8"))["verdicts"]
+        return defaultdict(
+            lambda: defaultdict(list),
+            {judge: defaultdict(list, families) for judge, families in kept.items()},
+        )
     cells: dict[str, dict[str, list[list[bool]]]] = defaultdict(lambda: defaultdict(list))
     for path in sorted(folder.glob("*.json")):
         _, judge, _ = path.stem.split("__")
@@ -47,11 +55,17 @@ def cell(answers: list[list[bool]]) -> str:
 
 
 def main() -> int:
-    folder = HERE / (sys.argv[1] if len(sys.argv) > 1 else "results-repeat")
+    args = [a for a in sys.argv[1:] if a != "--save"]
+    folder = HERE / (args[0] if args else "results-repeat")
     cells = load(folder)
     if not cells:
         print(f"No result files in {folder}.")
         return 1
+    if "--save" in sys.argv:
+        kept = {"judge_model": "Claude Haiku 5.5 via Claude Code", "verdicts": cells}
+        (HERE / "tallies-repeat.json").write_text(
+            json.dumps(kept, separators=(",", ":")) + "\n", encoding="utf-8"
+        )
     order = sorted(cells, key=lambda j: -majority(cells[j]["drop"])[0])
 
     print("Pass rate by majority of the trials, with the exact 95% interval\n")

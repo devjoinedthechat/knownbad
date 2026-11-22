@@ -116,3 +116,14 @@ def test_the_repeat_run_grades_references_and_smallest_edits_only():
     # Every edit is still held against a control that is in the run.
     ids = {c.id for c in kept}
     assert all(c.base in ids for c in kept if c.base)
+
+
+def test_the_kept_repeat_counts_give_the_published_tables(capsys, monkeypatch):
+    import summarise_repeat
+
+    monkeypatch.setattr(sys, "argv", ["summarise_repeat.py", "tallies-repeat.json"])
+    assert summarise_repeat.main() == 0
+    out = capsys.readouterr().out
+    # The rows docs/findings.md quotes from the repeat run.
+    assert "| `langchain-qa` | 100% (74 of 74, 95%–100%) | 37% (16 of 43, 23%–53%)" in out
+    assert "| `strict` | 5% | 16% | 9% |" in out

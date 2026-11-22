@@ -13,7 +13,9 @@
   `items`.
 - `knownbad diff` tests items, not single flips, for the same reason. The
   result has an `items` count of better, worse and mixed.
-
+- Judge study: the smallest edits graded three times on all seven Haiku
+  judges, through Claude Code. The split on missing content holds in every
+  trial; rates in the middle move by up to 18 points between trials.
 - With `--cache`, the same answer reached by two workers at once is asked
   once. Before, both could miss the cache and both called the judge.
 
