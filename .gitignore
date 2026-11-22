@@ -26,3 +26,4 @@ uv.lock
 .env.*
 /study/judges/results-small/
 /study/judges/results-repeat*/
+/study/agents/results*/

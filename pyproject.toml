@@ -62,6 +62,7 @@ select = ["E", "F", "I", "B", "UP"]
 "src/knownbad/report/html.py" = ["E501"]
 # Quoted judge prompts keep their original line lengths.
 "study/judges/*.py" = ["E501"]
+"study/agents/*.py" = ["E501"]
 
 [tool.mypy]
 strict = true
